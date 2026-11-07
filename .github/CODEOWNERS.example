@@ -1,0 +1,12 @@
+# 範例檔：目前不會啟用自動指定審查人。
+# 團隊決定實際 GitHub 帳號或組織 team 後：
+# 1. 填入有此 repo 寫入權限的真實帳號。
+# 2. 改名為 .github/CODEOWNERS。
+# 3. 如需強制審查，在 GitHub 保護規則啟用對應條件。
+#
+# 以下僅為格式範例，維持註解直到指定真實帳號：
+# /hardware/ @hardware-owner
+# /firmware/ @firmware-owner
+# /ground_station/ @ground-owner
+# /mechanical/ @mechanical-owner
+# /docs/ @docs-owner

@@ -1,0 +1,56 @@
+# Operating systems
+.DS_Store
+Thumbs.db
+
+# Local editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# KiCad personal state, locks, caches and automatic backups
+*.kicad_prl
+*.kicad_user
+*.kicad_sch-bak
+*.kicad_pcb-bak
+*.lck
+fp-info-cache
+*-backups/
+*_backups/
+*_autosave*
+
+# Local environments and secrets
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+local.mk
+
+# Generated build directories
+build/
+dist/
+Debug/
+Release/
+*.o
+*.d
+*.su
+*.elf
+*.map
+*.hex
+*.bin
+*.list
+
+# Runtime outputs: place regenerable output in these explicit locations
+ground_station/logs/
+ground_station/reports/
+tools/output/
+tests/output/
+*.log
+
+# CSV, BOM, Gerber and calibration inputs are NOT globally ignored.
+# Keep small required test inputs and versioned release evidence deliberately.
+# Review before adding large generated assets.
