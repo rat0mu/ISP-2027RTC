@@ -6,7 +6,7 @@
 
 | 文件 | 內容 |
 | --- | --- |
-| [初始化指南](repo_setup.md) | 維護者建立 repo、第一次推送與 GitHub 設定 |
+| [新成員初始化指南](repo_setup.md) | 新成員 clone、設定提交身分與確認權限 |
 | [環境設定](installation.md) | 新成員取得專案與工具需求 |
 | [快速開始](usage.md) | 走完第一個任務與 PR |
 | [Git 工作流程](git_workflow.md) | 日常同步、分支與提交命名 |

@@ -31,7 +31,7 @@ git status
 
 這裡的姓名與 Email 只套用於本機這個 repo。Email 使用願意與提交紀錄關聯的地址，也可採用 GitHub 提供的 noreply 地址。clone 可以取得內容，push 仍需權限與自己的認證。
 
-若你是第一位建立 repo 的維護者，使用 [初始化指南](repo_setup.md)。不要在已 clone 的 repo 重新 git init。
+完整的第一次設定步驟見 [新成員初始化指南](repo_setup.md)。不要在已 clone 的 repo 重新 git init。
 
 ## 之後加入的工具
 
