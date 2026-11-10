@@ -20,6 +20,9 @@ fp-info-cache
 *_backups/
 *_autosave*
 
+# SOLIDWORKS lock files created while a document is open
+~$*
+
 # Local environments and secrets
 .venv/
 venv/
