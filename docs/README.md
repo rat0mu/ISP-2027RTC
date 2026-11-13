@@ -22,6 +22,7 @@
 | [系統架構](architecture.md) | 系統職責與資料流；目前為草案 |
 | [介面規格](interfaces.md) | 電氣、通訊、資料與機構介面；目前為草案 |
 | [設計決策](decisions.md) | 重大選擇的理由、代價與影響 |
+| [航電研發路徑圖](avionics_roadmap.md) | 航電從設計到比賽的階段、驗收與風險；目前為草案 |
 | [工程基本規則](engineering_rules.md) | 命名、路徑、程式與驗證基本要求 |
 | [測試與版本](testing.md) | 驗證程度、結果紀錄與里程碑 |
 | [維護者指南](maintainer_guide.md) | 權限、分支保護、責任安排與初始化清單 |

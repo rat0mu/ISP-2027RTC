@@ -1,4 +1,4 @@
-"""Generate the avionics bay concept model (avbay v0.7) in SOLIDWORKS.
+"""Generate the avionics bay concept model (avbay v0.8) in SOLIDWORKS.
 
 Layout
 - Bulkhead plate at the nose cone base carries everything.
@@ -6,8 +6,9 @@ Layout
   way a stack of round boards is normally held; nothing screws into the
   printed spine.
 - A 3D printed spine stands on the bulkhead inside the board slot. Its
-  lower part is an open channel holding four 18650 cells, reached from
-  the open (+X) side.
+  lower part is an open channel holding four 18650 cells (two welded
+  pairs, 1 mm of sleeve room around them), reached from the open (+X)
+  side and closed by a printed cover held with eight M3 screws.
 - Above the boards the spine widens (filleted neck) into one hollow
   equipment bay of constant section. The competition's stock GPS tracker
   stands inside it and slides in and out through the open +X side. The
@@ -40,7 +41,7 @@ import pythoncom
 import win32com.client
 from win32com.client import VARIANT
 
-VERSION = "v0_7"
+VERSION = "v0_8"
 PREFIX = f"avbay_{VERSION}_"
 
 # ---------------------------------------------------------------- parameters
@@ -75,8 +76,8 @@ PARAMS = {
     # spine: battery channel (U section, open toward +X)
     "cell_dia": 18.5,
     "cell_len": 65.0,
-    "cavity_x": (-10.0, 10.0),  # cavity depth, cell axis at x = 0
-    "cavity_half_y": 19.5,  # two cells side by side
+    "cavity_x": (-11.0, 11.0),  # cavity depth, cell axis at x = 0; 1 mm per side for a sleeve
+    "cavity_half_y": 20.5,  # two cells side by side, 1 mm per side for a sleeve
     "spine_wall": 3.0,
     "spine_corner_r": 5.0,  # rounding of the two back corners
     "foot_x": (-25.0, 22.0),
@@ -85,6 +86,11 @@ PARAMS = {
     "foot_hole": 4.3,  # M4 clearance
     "floor_thk": 3.0,
     "cell_gap": 2.0,  # contact space under each cell tier
+    # screwed side cover over the open (+X) face of the battery channel; lugs on
+    # the outside of the channel walls sit between the boards (rows are stations)
+    "cover": {"thk": 3.0, "end_gap": 0.5, "lug_len": 8.0, "lug_out": 6.0, "lug_tall": 8.0,
+              "rows_z": (25.0, 60.0, 96.0, 135.0), "pilot": 2.5, "screw_hole": 3.4,
+              "wire_half": 4.0, "wire_tall": 6.0, "floor_clear": 0.5},
     # spine: equipment bays (hollow, rounded boxes centred on the axis)
     "bay_wall": 4.0,
     "bay_z": (110.0, 276.0),  # stations of the bay floor and top
@@ -100,8 +106,8 @@ PARAMS = {
     "tracker": {"size": (32.0, 65.0, 110.0), "z": 158.0},  # x, y, z extents; stands on the axis
     # antenna placeholders on the bay 2 top face: (x, y) centre, footprint, height
     # flexible (rubber duck) antennas on the cap: (x, y) centre, diameter, length
-    "ant_433": {"pos": (0.0, 0.0), "dia": 6.0, "len": 150.0},  # on axis; a true quarter wave (~165) does not fit the tip
-    "ant_920": {"pos": (14.0, -14.0), "dia": 6.0, "len": 80.0},  # main telemetry
+    "ant_433": {"pos": (0.0, 0.0), "dia": 6.0, "len": 150.0},  # backup system telemetry (DEC-001); on axis; a true quarter wave (~165) does not fit the tip
+    "ant_920": {"pos": (14.0, -14.0), "dia": 6.0, "len": 80.0},  # main system telemetry (DEC-001)
     "ant_tracker": {"pos": (14.0, 14.0), "dia": 6.0, "len": 80.0},  # the tracker's own LoRa antenna (TW band)
     "sma_base": {"dia": 8.0, "len": 10.0},  # SMA jack under each antenna
     "gnss_patch": {"pos": (-17.5, 0.0), "size": (25.0, 25.0), "thk": 4.0},  # custom GPS
@@ -136,6 +142,7 @@ COLORS = {  # r, g, b, transparency
     "conn": (0.08, 0.08, 0.08, 0.0),
     "spine": (0.36, 0.37, 0.4, 0.0),
     "cell": (0.15, 0.4, 0.85, 0.0),
+    "cover": (0.85, 0.45, 0.1, 0.35),
 }
 
 
@@ -456,6 +463,11 @@ def build_spine(sw, tpl, path, p, tiers):
     sm = start_sketch(model)
     rect(sm, cx0, -hy_in, bx + 5.0, hy_in)
     cut(model, z1 - z0, z0 - base)
+    # let the side cover (as wide as the channel) pass through the bay floor
+    cv = p["cover"]
+    sm = start_sketch(model)
+    rect(sm, xf, -hy_out - cv["floor_clear"], bx + 5.0, hy_out + cv["floor_clear"])
+    cut(model, w + 1.5, bz0 - 1.0 - base)
     # one opening in the +X wall: cell access below, tracker access above
     wz0, wz1 = p["window_z"]
     sm = start_sketch(model)
@@ -484,6 +496,15 @@ def build_spine(sw, tpl, path, p, tiers):
                 circle(sm, -(z - base), y, bo["dia"])
                 circle(sm, -(z - base), y, bo["hole"])
     side_boss(model, 2, bosses_x, bo["height"], bx, True)
+
+    # cover screw lugs on the outside of the channel walls (Right plane, extruded along +X)
+    def lugs(sm):
+        for z in cv["rows_z"]:
+            for sign in (1, -1):
+                y0, y1 = sorted((sign * (hy_out - 0.5), sign * (hy_out + cv["lug_out"])))
+                rect(sm, -(z + cv["lug_tall"] / 2 - base), y0, -(z - cv["lug_tall"] / 2 - base), y1)
+                circle(sm, -(z - base), sign * (hy_out + cv["lug_out"] / 2), cv["pilot"])
+    side_boss(model, 2, lugs, cv["lug_len"], xf - cv["lug_len"], False)
 
     # zip-tie posts on the +Y and -Y faces
     cl = p["clip"]
@@ -518,6 +539,45 @@ def build_cap(sw, tpl, path, p):
     print("  cap")
     fillet(model, p["bay_top_fillet"], loop_at(cap["lip"] + cap["thk"], on_box(bx, by)), "cap top edge")
     set_color(model, "spine")
+    save(model, path)
+    return model
+
+
+def cover_span(p, tiers):
+    """Stations of the side cover: just above the foot to the top of the channel."""
+    z0 = p["bulkhead_thk"] + p["foot_thk"] + p["cover"]["end_gap"]
+    z1 = tiers[-1][1] + p["cell_gap"] + 1.0 + p["floor_thk"] - p["cover"]["end_gap"]
+    return z0, z1
+
+
+def build_cover(sw, tpl, path, p, tiers):
+    """Side cover of the battery channel, modelled in assembly coordinates
+    (stations from the nose cone base): a plate on the open face with an ear
+    and a screw hole at each lug, a notch at the bottom for the backup pack
+    leads and a window above the middle floor for the main pack leads."""
+    s, cv = spine_dims(p), p["cover"]
+    hw, he = s["half_y"], s["half_y"] + cv["lug_out"]
+    z0, z1 = cover_span(p, tiers)
+    t2 = cv["lug_tall"] / 2
+    right = [(hw, z0)]
+    for z in cv["rows_z"]:
+        right += [(hw, z - t2), (he, z - t2), (he, z + t2), (hw, z + t2)]
+    right.append((hw, z1))
+    left = [(-y, z) for y, z in reversed(right)]
+    wh, wt = cv["wire_half"], cv["wire_tall"]
+    outline = right + left + [(-wh, z0), (-wh, z0 + wt), (wh, z0 + wt), (wh, z0)]
+    main_z = tiers[-1][0] - p["cell_gap"]  # bottom of the main pack's contact space
+    model = sw.NewDocument(tpl, 0, 0, 0)
+
+    def sketch(sm):  # Right plane: sketch (x, y) -> model (-Z, Y)
+        polygon(sm, [(-z, y) for y, z in outline])
+        rect(sm, -(main_z + wt), -wh, -main_z, wh)
+        for z in cv["rows_z"]:
+            for sign in (1, -1):
+                circle(sm, -z, sign * (hw + cv["lug_out"] / 2), cv["screw_hole"])
+    side_boss(model, 2, sketch, cv["thk"], s["x_front"], False)
+    print("  cell_cover")
+    set_color(model, "cover")
     save(model, path)
     return model
 
@@ -572,7 +632,7 @@ def main():
              "rod_m3.SLDPRT", "nut_m3.SLDPRT", "stack_connector.SLDPRT", "spine.SLDPRT",
              "cell_18650.SLDPRT", "ant_433.SLDPRT", "ant_920.SLDPRT", "ant_tracker.SLDPRT",
              "sma_base.SLDPRT", "gnss_patch.SLDPRT", "tracker.SLDPRT", "cap.SLDPRT", "gps_board.SLDPRT",
-             "assembly.SLDASM", "view_iso.png",
+             "cell_cover.SLDPRT", "assembly.SLDASM", "view_iso.png",
              "view_open_side.png", "view_side.png"]
     for n in names:
         if os.path.exists(f(n)):
@@ -620,6 +680,7 @@ def main():
                        p["spacer_len"], "conn")
     spine = build_spine(sw, part_tpl, f("spine.SLDPRT"), p, tiers)
     cell = build_disc(sw, part_tpl, f("cell_18650.SLDPRT"), p["cell_dia"], p["cell_len"], [], "cell")
+    cover = build_cover(sw, part_tpl, f("cell_cover.SLDPRT"), p, tiers)
     a433, a920, atrk = p["ant_433"], p["ant_920"], p["ant_tracker"]
     sma, patch, trk = p["sma_base"], p["gnss_patch"], p["tracker"]
     whip433 = build_disc(sw, part_tpl, f("ant_433.SLDPRT"), a433["dia"], a433["len"], [], "conn")
@@ -637,7 +698,7 @@ def main():
                          ("stack_connector", conn), ("spine", spine), ("cell_18650", cell),
                          ("ant_433", whip433), ("ant_920", whip920), ("sma_base", sma_base),
                          ("ant_tracker", whip_trk), ("gnss_patch", gnss_patch), ("tracker", tracker),
-                         ("cap", cap_part), ("gps_board", gps_board)):
+                         ("cap", cap_part), ("gps_board", gps_board), ("cell_cover", cover)):
         print(f"  {label:16s} box [xmin ymin zmin xmax ymax zmax] mm = {box_mm(model)}")
     sb = box_mm(spine)
     if sb[2] < -0.01 or abs(sb[5] - (p["bay_z"][1] - p["cap"]["thk"] - base)) > 0.01:
@@ -667,6 +728,7 @@ def main():
     for i, (z0, _) in enumerate(tiers, start=1):
         for y in (cell_y, -cell_y):
             comps.append((f"cell_tier_{i}", place(sw, asm, f("cell_18650.SLDPRT"), z0, 0.0, y)))
+    comps.append(("cell_cover", place(sw, asm, f("cell_cover.SLDPRT"), 0.0)))
     top2 = p["bay_z"][1]
     comps.append(("cap", place(sw, asm, f("cap.SLDPRT"), top2 - p["cap"]["thk"] - p["cap"]["lip"])))
     comps.append(("gps_board", place(sw, asm, f("gps_board.SLDPRT"), gb["z"],
@@ -740,6 +802,10 @@ def main():
     asm.ShowNamedView2("*Isometric", 7)
     noarg(asm, "ViewZoomtofit2")
 
+    cz0, cz1 = cover_span(p, tiers)
+    print(f"side cover: x {s['x_front']:.1f}..{s['x_front'] + p['cover']['thk']:.1f}, z {cz0:.1f}..{cz1:.1f}, "
+          f"lug rows {p['cover']['rows_z']}")
+    print(f"board slot: width {2 * slot_half:.1f}, from x = {s['x_back'] - p['slot_clear']:.1f}")
     print("total components:", len(comps))
     print("cell tiers (z):", [(round(a, 1), round(b, 1)) for a, b in tiers])
     print("written to", out)

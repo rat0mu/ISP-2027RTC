@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 900" width="1500" height="900" font-family="'Microsoft JhengHei','Noto Sans TC','PingFang TC',sans-serif">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#111"/></marker><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#fafafa"/><line x1="0" y1="0" x2="0" y2="6" stroke="#bbb" stroke-width="2"/></pattern></defs>
+<rect width="1500" height="900" fill="#fff"/>
+<text x="30" y="34" font-size="18" text-anchor="start" fill="#222" font-weight="bold">航電與回收次系統研發流程（草案）</text>
+<text x="30" y="54" font-size="11" text-anchor="start" fill="#777" font-weight="normal">里程碑月份為假設比賽於 2027-08 的暫定值，待確認比賽日期後調整</text>
+<rect x="20" y="70" width="1260" height="610" fill="#efefef"/>
+<rect x="38" y="335" width="26" height="26" fill="#fff" stroke="#555"/>
+<text x="51" y="354" font-size="14" text-anchor="middle" fill="#222" font-weight="normal">B</text>
+<text x="72" y="354" font-size="14" text-anchor="start" fill="#222" font-weight="normal">航電次系統</text>
+<rect x="200" y="322" width="150" height="52" fill="url(#hatch)" stroke="#111" stroke-width="1.6"/>
+<text x="275" y="344" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">航電需求與</text>
+<text x="275" y="362" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">系統架構</text>
+<rect x="194" y="314" width="41" height="16" rx="2" fill="#111"/>
+<text x="214.5" y="326" font-size="10" text-anchor="middle" fill="#fff" font-weight="bold">MDR</text>
+<text x="275" y="396" font-size="11" text-anchor="middle" fill="#777" font-weight="normal">2026-12</text>
+<rect x="400" y="100" width="250" height="540" fill="#f6f6f6" stroke="#999" stroke-width="1"/>
+<text x="525.0" y="124" font-size="13" text-anchor="middle" fill="#222" font-weight="bold">細化設計</text>
+<rect x="406" y="92" width="41" height="16" rx="2" fill="#111"/>
+<text x="426.5" y="104" font-size="10" text-anchor="middle" fill="#fff" font-weight="bold">PDR</text>
+<rect x="425" y="146" width="200" height="76" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="525.0" y="170.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">感測器與飛控</text>
+<text x="525.0" y="188.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">主系統／備援</text>
+<text x="525.0" y="206.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">IMU、氣壓計</text>
+<rect x="425" y="238" width="200" height="76" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="525.0" y="262.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">電源與電池</text>
+<text x="525.0" y="280.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">4×18650、保護</text>
+<text x="525.0" y="298.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">功耗預算</text>
+<rect x="425" y="330" width="200" height="76" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="525.0" y="354.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">通訊與定位</text>
+<text x="525.0" y="372.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">920／433 MHz</text>
+<text x="525.0" y="390.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">GNSS 與天線</text>
+<rect x="425" y="422" width="200" height="76" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="525.0" y="446.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">機構與介面</text>
+<text x="525.0" y="464.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">馬蹄形 PCB 堆疊</text>
+<text x="525.0" y="482.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">中央結構件、鼻錐</text>
+<rect x="425" y="514" width="200" height="76" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="525.0" y="538.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">點火與回收介面</text>
+<text x="525.0" y="556.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">點火輸出</text>
+<text x="525.0" y="574.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">箭身高度計</text>
+<text x="650" y="94" font-size="11" text-anchor="end" fill="#777" font-weight="normal">2027-02</text>
+<rect x="700" y="160" width="250" height="420" fill="#f6f6f6" stroke="#999" stroke-width="1"/>
+<text x="825.0" y="184" font-size="13" text-anchor="middle" fill="#222" font-weight="bold">實作開發</text>
+<rect x="725" y="206" width="200" height="74" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="825.0" y="238.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">電路與 PCB 製作</text>
+<text x="825.0" y="256.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">原理圖、佈局、打樣</text>
+<rect x="725" y="296" width="200" height="74" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="825.0" y="319.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">韌體開發</text>
+<text x="825.0" y="337.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">狀態機、頂點判定</text>
+<text x="825.0" y="355.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">資料記錄</text>
+<rect x="725" y="386" width="200" height="74" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="825.0" y="418.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">地面站軟體與介面</text>
+<text x="825.0" y="436.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">接收、顯示、記錄</text>
+<rect x="725" y="476" width="200" height="74" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="825.0" y="499.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">3D 列印與試裝</text>
+<text x="825.0" y="517.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">中央結構件、蓋板</text>
+<text x="825.0" y="535.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">鼻錐試裝</text>
+<rect x="1010" y="100" width="250" height="540" fill="#f6f6f6" stroke="#999" stroke-width="1"/>
+<text x="1135.0" y="124" font-size="13" text-anchor="middle" fill="#222" font-weight="bold">測試</text>
+<rect x="1016" y="92" width="41" height="16" rx="2" fill="#111"/>
+<text x="1036.5" y="104" font-size="10" text-anchor="middle" fill="#fff" font-weight="bold">CDR</text>
+<rect x="1035" y="146" width="200" height="76" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="1135.0" y="179.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">單板功能與</text>
+<text x="1135.0" y="197.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">感測器校正</text>
+<rect x="1035" y="238" width="200" height="76" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="1135.0" y="271.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">電源續航 3 小時</text>
+<text x="1135.0" y="289.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">與保護</text>
+<rect x="1035" y="330" width="200" height="76" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="1135.0" y="363.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">振動、跌落與</text>
+<text x="1135.0" y="381.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">環境測試</text>
+<rect x="1035" y="422" width="200" height="76" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="1135.0" y="455.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">遙測射程與 GPS</text>
+<text x="1135.0" y="473.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">兩頻段、同頻干擾</text>
+<rect x="1035" y="514" width="200" height="76" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="1135.0" y="538.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">系統整合測試</text>
+<text x="1135.0" y="556.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">鼻錐組裝、模擬飛行</text>
+<text x="1135.0" y="574.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">點火假負載</text>
+<text x="1260" y="94" font-size="11" text-anchor="end" fill="#777" font-weight="normal">2027-05</text>
+<rect x="1320" y="335" width="140" height="56" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="1390.0" y="358.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">交接</text>
+<text x="1390.0" y="376.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">全箭整合</text>
+<path d="M350,348 L400,348" fill="none" stroke="#111" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M650,370 L700,370" fill="none" stroke="#111" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M950,370 L1010,370" fill="none" stroke="#111" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M1260,363 L1320,363" fill="none" stroke="#111" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M800,580 L800,665 L525,665 L525,640" fill="none" stroke="#111" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M1135,640 L1135,675 L900,675 L900,580" fill="none" stroke="#111" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="662" y="658" font-size="11" text-anchor="middle" fill="#777" font-weight="normal">設計修正</text>
+<text x="1018" y="668" font-size="11" text-anchor="middle" fill="#777" font-weight="normal">測試未過，回到實作</text>
+<rect x="20" y="700" width="1260" height="180" fill="#fafafa" stroke="#e0e0e0"/>
+<rect x="38" y="765" width="26" height="26" fill="#fff" stroke="#555"/>
+<text x="51" y="784" font-size="14" text-anchor="middle" fill="#222" font-weight="normal">C</text>
+<text x="72" y="778" font-size="14" text-anchor="start" fill="#222" font-weight="normal">回收次系統</text>
+<rect x="200" y="752" width="150" height="52" fill="url(#hatch)" stroke="#111" stroke-width="1.6"/>
+<text x="275" y="774" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">回收方案設計</text>
+<text x="275" y="792" font-size="11" text-anchor="middle" fill="#555" font-weight="normal">（雙段、觸發分工）</text>
+<rect x="194" y="744" width="41" height="16" rx="2" fill="#111"/>
+<text x="214.5" y="756" font-size="10" text-anchor="middle" fill="#fff" font-weight="bold">MDR</text>
+<rect x="400" y="736" width="250" height="84" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="525.0" y="764.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">降落傘尺寸計算</text>
+<text x="525.0" y="782.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">彈射機構與傘繩設計</text>
+<text x="525.0" y="800.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">電氣與點火介面設計</text>
+<rect x="394" y="728" width="41" height="16" rx="2" fill="#111"/>
+<text x="414.5" y="740" font-size="10" text-anchor="middle" fill="#fff" font-weight="bold">PDR</text>
+<rect x="700" y="736" width="250" height="84" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="825.0" y="764.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">傘與彈射機構製作</text>
+<text x="825.0" y="782.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">點火線束</text>
+<text x="825.0" y="800.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">高度計設定</text>
+<rect x="1010" y="736" width="250" height="84" rx="3" fill="#fff" stroke="#888" stroke-width="1"/>
+<text x="1135.0" y="764.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">地面彈射與展開測試</text>
+<text x="1135.0" y="782.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">點火線路與時序整合</text>
+<text x="1135.0" y="800.5" font-size="13" text-anchor="middle" fill="#222" font-weight="normal">（試飛併入全箭整合）</text>
+<rect x="1004" y="728" width="41" height="16" rx="2" fill="#111"/>
+<text x="1024.5" y="740" font-size="10" text-anchor="middle" fill="#fff" font-weight="bold">CDR</text>
+<path d="M350,778 L400,778" fill="none" stroke="#111" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M650,778 L700,778" fill="none" stroke="#111" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M950,778 L1010,778" fill="none" stroke="#111" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M1260,778 L1390,778 L1390,391" fill="none" stroke="#111" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M1135,820 L1135,845" fill="none" stroke="#111" stroke-width="1.4"/>
+<path d="M1135,845 L825,845 L825,820" fill="none" stroke="#111" stroke-width="1.4" marker-end="url(#ah)"/>
+<path d="M775,820 L775,868 L525,868 L525,820" fill="none" stroke="#111" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="1000" y="862" font-size="11" text-anchor="middle" fill="#777" font-weight="normal">測試未過，回到製作</text>
+<text x="650" y="861" font-size="11" text-anchor="middle" fill="#777" font-weight="normal">設計修正</text>
+<path d="M440,590 L440,736" fill="none" stroke="#c0392b" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#ah)"/>
+<text x="450" y="712" font-size="11" text-anchor="start" fill="#c0392b" font-weight="normal">點火觸發與開傘狀態回報（介面待定）</text>
+</svg>
