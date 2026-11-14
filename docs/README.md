@@ -11,6 +11,7 @@
 | [快速開始](usage.md) | 走完第一個任務與 PR |
 | [Git 工作流程](git_workflow.md) | 日常同步、分支與提交命名 |
 | [任務與審查](collaboration.md) | 任務驗收、PR 與各類成果要求 |
+| [協作流程範例](workflow_examples.md) | 從開 Issue 到合併的三個完整範例與寫法對照 |
 | [常見問題](troubleshooting.md) | Git 操作與協作疑問 |
 
 ## 規格與管理
