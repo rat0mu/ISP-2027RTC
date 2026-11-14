@@ -1,4 +1,4 @@
-"""Generate the avionics bay concept model (avbay v0.8) in SOLIDWORKS.
+"""Generate the avionics bay concept model (avbay v0.10) in SOLIDWORKS.
 
 Layout
 - Bulkhead plate at the nose cone base carries everything.
@@ -6,15 +6,18 @@ Layout
   way a stack of round boards is normally held; nothing screws into the
   printed spine.
 - A 3D printed spine stands on the bulkhead inside the board slot. Its
-  lower part is an open channel holding four 18650 cells (two welded
-  pairs, 1 mm of sleeve room around them), reached from the open (+X)
-  side and closed by a printed cover held with eight M3 screws.
+  lower part is an open channel holding four 18650 cells standing upright:
+  two welded pairs, each pair one behind the other along X so the channel
+  (and the board slot) stays narrow, with about 1 mm of sleeve room around
+  them. A pair slides out through the open (+X) side, which is closed by a
+  printed cover held with eight M3 screws.
 - Above the boards the spine widens (filleted neck) into one hollow
   equipment bay of constant section. The competition's stock GPS tracker
   stands inside it and slides in and out through the open +X side. The
   other three faces carry screw bosses for small modules and zip-tie posts
-  for cables; a separate printed cap closes the top and carries the
-  (flexible) antennas and the GPS patch.
+  for cables; a separate printed cap closes the top and carries the 433 MHz
+  and tracker antennas and the GPS patch. The 920 MHz antenna hangs down
+  along the -Y face from a small printed bracket.
 
 Drives a running SOLIDWORKS session through its COM API and writes native
 SLDPRT / SLDASM files plus preview images next to this script. All
@@ -41,7 +44,7 @@ import pythoncom
 import win32com.client
 from win32com.client import VARIANT
 
-VERSION = "v0_8"
+VERSION = "v0_10"
 PREFIX = f"avbay_{VERSION}_"
 
 # ---------------------------------------------------------------- parameters
@@ -58,12 +61,15 @@ PARAMS = {
     "nut_thk": 2.4,
     "spacer_od": 5.5,
     "spacer_base_len": 10.0,  # bulkhead -> first board
-    "spacer_len": 15.0,  # between boards
+    "spacer_len": 11.81,  # between boards = mated height of Samtec SFM/TFM, lead style -32
     "slot_clear": 1.0,  # board slot to spine wall
     "slot_corner_r": 6.0,
     "tip_r": 3.0,  # rounding of the two horseshoe tips
-    "conn_size": (22.0, 7.0),  # board-to-board connector placeholder, x by y
-    "conn_pos": (15.0, 36.0),  # its centre on the +Y arm (mirrored on -Y)
+    # board-to-board stacking connector placeholders (Samtec SFM/TFM, 1.27 mm, two rows);
+    # body sizes are estimates until samples are measured. x by y, centre at (x, +-y).
+    "conn_main": (31.0, 6.0),  # 2x20 on the +Y arm, main system bus
+    "conn_backup": (18.3, 6.0),  # 2x10 on the -Y arm, backup system bus
+    "conn_pos": (13.0, 36.0),
     # bulkhead
     "bulkhead_dia": 130.0,  # NOSE_v1 shoulder bore is 132
     "bulkhead_thk": 6.0,
@@ -76,20 +82,21 @@ PARAMS = {
     # spine: battery channel (U section, open toward +X)
     "cell_dia": 18.5,
     "cell_len": 65.0,
-    "cavity_x": (-11.0, 11.0),  # cavity depth, cell axis at x = 0; 1 mm per side for a sleeve
-    "cavity_half_y": 20.5,  # two cells side by side, 1 mm per side for a sleeve
+    "cavity_x": (-20.5, 20.5),  # two cells one behind the other along X, about 1 mm sleeve room
+    "cavity_half_y": 11.0,  # one cell wide, 1.75 mm per side for a sleeve
     "spine_wall": 3.0,
     "spine_corner_r": 5.0,  # rounding of the two back corners
-    "foot_x": (-25.0, 22.0),
+    "foot_x": (-27.0, 24.0),
+    "foot_half_y": 22.0,  # wider than the channel so the screws clear its walls
     "foot_thk": 4.0,
-    "foot_holes": [(-19.0, 15.0), (-19.0, -15.0), (16.0, 15.0), (16.0, -15.0)],
+    "foot_holes": [(-21.0, 17.5), (-21.0, -17.5), (18.0, 17.5), (18.0, -17.5)],
     "foot_hole": 4.3,  # M4 clearance
     "floor_thk": 3.0,
     "cell_gap": 2.0,  # contact space under each cell tier
     # screwed side cover over the open (+X) face of the battery channel; lugs on
     # the outside of the channel walls sit between the boards (rows are stations)
     "cover": {"thk": 3.0, "end_gap": 0.5, "lug_len": 8.0, "lug_out": 6.0, "lug_tall": 8.0,
-              "rows_z": (25.0, 60.0, 96.0, 135.0), "pilot": 2.5, "screw_hole": 3.4,
+              "rows_z": (23.5, 63.7, 96.0, 135.0), "pilot": 2.5, "screw_hole": 3.4,
               "wire_half": 4.0, "wire_tall": 6.0, "floor_clear": 0.5},
     # spine: equipment bays (hollow, rounded boxes centred on the axis)
     "bay_wall": 4.0,
@@ -107,7 +114,8 @@ PARAMS = {
     # antenna placeholders on the bay 2 top face: (x, y) centre, footprint, height
     # flexible (rubber duck) antennas on the cap: (x, y) centre, diameter, length
     "ant_433": {"pos": (0.0, 0.0), "dia": 6.0, "len": 150.0},  # backup system telemetry (DEC-001); on axis; a true quarter wave (~165) does not fit the tip
-    "ant_920": {"pos": (14.0, -14.0), "dia": 6.0, "len": 80.0},  # main system telemetry (DEC-001)
+    "ant_920": {"pos": (-2.0, -45.0), "dia": 6.0, "len": 80.0,  # main system telemetry (DEC-001)
+                "mount": {"z": (242.0, 250.0), "half_x": 5.0, "out": 10.0, "hole": 6.5}},  # bracket on the -Y face; SMA and whip hang below it
     "ant_tracker": {"pos": (14.0, 14.0), "dia": 6.0, "len": 80.0},  # the tracker's own LoRa antenna (TW band)
     "sma_base": {"dia": 8.0, "len": 10.0},  # SMA jack under each antenna
     "gnss_patch": {"pos": (-17.5, 0.0), "size": (25.0, 25.0), "thk": 4.0},  # custom GPS
@@ -433,7 +441,7 @@ def build_spine(sw, tpl, path, p, tiers):
     fillet(model, p["spine_corner_r"], vertical_at([(xb, hy_out), (xb, -hy_out)]), "channel back corners")
 
     sm = start_sketch(model)  # foot
-    rect(sm, p["foot_x"][0], -hy_out, p["foot_x"][1], hy_out)
+    rect(sm, p["foot_x"][0], -p["foot_half_y"], p["foot_x"][1], p["foot_half_y"])
     for x, y in p["foot_holes"]:
         circle(sm, x, y, p["foot_hole"])
     extrude(model, p["foot_thk"])
@@ -506,6 +514,16 @@ def build_spine(sw, tpl, path, p, tiers):
                 circle(sm, -(z - base), sign * (hy_out + cv["lug_out"] / 2), cv["pilot"])
     side_boss(model, 2, lugs, cv["lug_len"], xf - cv["lug_len"], False)
 
+    # bracket for the side-mounted 920 MHz antenna on the -Y face, with a vertical hole for the SMA jack
+    a9 = p["ant_920"]
+    mz0, mz1 = a9["mount"]["z"]
+    mx, mh = a9["pos"][0], a9["mount"]["half_x"]
+    side_boss(model, 1, lambda sm: rect(sm, mx - mh, -(mz0 - base), mx + mh, -(mz1 - base)),
+              a9["mount"]["out"], by, True)
+    sm = start_sketch(model)
+    circle(sm, *a9["pos"], a9["mount"]["hole"])
+    cut(model, mz1 - mz0 + 2.0, mz0 - 1.0 - base)
+
     # zip-tie posts on the +Y and -Y faces
     cl = p["clip"]
     for negative in (False, True):
@@ -533,7 +551,7 @@ def build_cap(sw, tpl, path, p):
     rounded_rect(sm, bx, by, br)
     for y in (cap["screw_y"], -cap["screw_y"]):
         circle(sm, 0.0, y, cap["screw_hole"])
-    for key in ("ant_433", "ant_920", "ant_tracker"):
+    for key in ("ant_433", "ant_tracker"):  # the 920 MHz antenna is on the -Y face
         circle(sm, *p[key]["pos"], cap["ant_hole"])
     extrude(model, cap["thk"], cap["lip"])
     print("  cap")
@@ -628,11 +646,12 @@ def main():
     def f(name):
         return os.path.join(out, PREFIX + name)
 
-    names = ["bulkhead.SLDPRT", "pcb_outline.SLDPRT", "spacer_m3_10.SLDPRT", "spacer_m3_15.SLDPRT",
-             "rod_m3.SLDPRT", "nut_m3.SLDPRT", "stack_connector.SLDPRT", "spine.SLDPRT",
+    names = ["bulkhead.SLDPRT", "pcb_outline.SLDPRT", "spacer_m3_10.SLDPRT", "spacer_m3_stack.SLDPRT",
+             "rod_m3.SLDPRT", "nut_m3.SLDPRT", "stack_connector_2x20.SLDPRT", "stack_connector_2x10.SLDPRT",
+             "spine.SLDPRT",
              "cell_18650.SLDPRT", "ant_433.SLDPRT", "ant_920.SLDPRT", "ant_tracker.SLDPRT",
              "sma_base.SLDPRT", "gnss_patch.SLDPRT", "tracker.SLDPRT", "cap.SLDPRT", "gps_board.SLDPRT",
-             "cell_cover.SLDPRT", "assembly.SLDASM", "view_iso.png",
+             "cell_cover.SLDPRT", "assembly.SLDASM", "view_iso.png", "view_antenna_side.png",
              "view_open_side.png", "view_side.png"]
     for n in names:
         if os.path.exists(f(n)):
@@ -672,12 +691,14 @@ def main():
     pcb = build_pcb(sw, part_tpl, f("pcb_outline.SLDPRT"), p)
     sp10 = build_disc(sw, part_tpl, f("spacer_m3_10.SLDPRT"), p["spacer_od"], p["spacer_base_len"],
                       [hole(p["rod_hole"])], "spacer")
-    sp15 = build_disc(sw, part_tpl, f("spacer_m3_15.SLDPRT"), p["spacer_od"], p["spacer_len"],
+    sp15 = build_disc(sw, part_tpl, f("spacer_m3_stack.SLDPRT"), p["spacer_od"], p["spacer_len"],
                       [hole(p["rod_hole"])], "spacer")
     rod = build_disc(sw, part_tpl, f("rod_m3.SLDPRT"), p["rod_dia"], rod_len, [], "steel")
     nut = build_disc(sw, part_tpl, f("nut_m3.SLDPRT"), p["nut_dia"], p["nut_thk"], [hole(p["rod_hole"])], "steel")
-    conn = build_block(sw, part_tpl, f("stack_connector.SLDPRT"), p["conn_size"][0], p["conn_size"][1],
+    conn = build_block(sw, part_tpl, f("stack_connector_2x20.SLDPRT"), p["conn_main"][0], p["conn_main"][1],
                        p["spacer_len"], "conn")
+    conn_b = build_block(sw, part_tpl, f("stack_connector_2x10.SLDPRT"), p["conn_backup"][0], p["conn_backup"][1],
+                         p["spacer_len"], "conn")
     spine = build_spine(sw, part_tpl, f("spine.SLDPRT"), p, tiers)
     cell = build_disc(sw, part_tpl, f("cell_18650.SLDPRT"), p["cell_dia"], p["cell_len"], [], "cell")
     cover = build_cover(sw, part_tpl, f("cell_cover.SLDPRT"), p, tiers)
@@ -694,8 +715,8 @@ def main():
     gps_board = build_block(sw, part_tpl, f("gps_board.SLDPRT"), gb["size"][0], gb["size"][1], gb["size"][2], "pcb")
 
     for label, model in (("bulkhead", bulkhead), ("pcb_outline", pcb), ("spacer_m3_10", sp10),
-                         ("spacer_m3_15", sp15), ("rod_m3", rod), ("nut_m3", nut),
-                         ("stack_connector", conn), ("spine", spine), ("cell_18650", cell),
+                         ("spacer_m3_stack", sp15), ("rod_m3", rod), ("nut_m3", nut),
+                         ("stack_connector_2x20", conn), ("stack_connector_2x10", conn_b), ("spine", spine), ("cell_18650", cell),
                          ("ant_433", whip433), ("ant_920", whip920), ("sma_base", sma_base),
                          ("ant_tracker", whip_trk), ("gnss_patch", gnss_patch), ("tracker", tracker),
                          ("cap", cap_part), ("gps_board", gps_board), ("cell_cover", cover)):
@@ -720,24 +741,25 @@ def main():
         comps.append((f"pcb_layer_{i}", place(sw, asm, f("pcb_outline.SLDPRT"), z)))
         if i < len(pcb_z):
             for x, y in rods:
-                comps.append((f"spacer_above_{i}", place(sw, asm, f("spacer_m3_15.SLDPRT"), z + p["pcb_thk"], x, y)))
-            for y in (cy, -cy):
-                comps.append((f"connector_above_{i}",
-                              place(sw, asm, f("stack_connector.SLDPRT"), z + p["pcb_thk"], cx, y)))
-    cell_y = p["cell_dia"] / 2 + 0.35
+                comps.append((f"spacer_above_{i}", place(sw, asm, f("spacer_m3_stack.SLDPRT"), z + p["pcb_thk"], x, y)))
+            for part, y in (("stack_connector_2x20.SLDPRT", cy), ("stack_connector_2x10.SLDPRT", -cy)):
+                comps.append((f"connector_above_{i}", place(sw, asm, f(part), z + p["pcb_thk"], cx, y)))
+    cell_x = p["cell_dia"] / 2 + 0.75
     for i, (z0, _) in enumerate(tiers, start=1):
-        for y in (cell_y, -cell_y):
-            comps.append((f"cell_tier_{i}", place(sw, asm, f("cell_18650.SLDPRT"), z0, 0.0, y)))
+        for x in (cell_x, -cell_x):
+            comps.append((f"cell_tier_{i}", place(sw, asm, f("cell_18650.SLDPRT"), z0, x, 0.0)))
     comps.append(("cell_cover", place(sw, asm, f("cell_cover.SLDPRT"), 0.0)))
     top2 = p["bay_z"][1]
     comps.append(("cap", place(sw, asm, f("cap.SLDPRT"), top2 - p["cap"]["thk"] - p["cap"]["lip"])))
     comps.append(("gps_board", place(sw, asm, f("gps_board.SLDPRT"), gb["z"],
                                      -p["bay_half"][0] - p["boss"]["height"] - gb["size"][0] / 2, 0.0)))
-    for key, part in (("ant_433", "ant_433.SLDPRT"), ("ant_920", "ant_920.SLDPRT"),
-                      ("ant_tracker", "ant_tracker.SLDPRT")):
+    for key, part in (("ant_433", "ant_433.SLDPRT"), ("ant_tracker", "ant_tracker.SLDPRT")):
         x, y = p[key]["pos"]
         comps.append((key + "_sma", place(sw, asm, f("sma_base.SLDPRT"), top2, x, y)))
         comps.append((key, place(sw, asm, f(part), top2 + sma["len"], x, y)))
+    z_sma = a920["mount"]["z"][0] - sma["len"]  # side antenna hangs below its bracket
+    comps.append(("ant_920_sma", place(sw, asm, f("sma_base.SLDPRT"), z_sma, *a920["pos"])))
+    comps.append(("ant_920", place(sw, asm, f("ant_920.SLDPRT"), z_sma - a920["len"], *a920["pos"])))
     comps.append(("gnss_patch", place(sw, asm, f("gnss_patch.SLDPRT"), top2, *patch["pos"])))
     comps.append(("tracker", place(sw, asm, f("tracker.SLDPRT"), trk["z"])))
     noarg(asm, "EditRebuild3")
@@ -781,7 +803,9 @@ def main():
             ("bay corner, bottom", reach(*p["bay_half"], p["bay_corner_r"]), p["bay_z"][0]),
             ("bay corner, top", reach(*p["bay_half"], p["bay_corner_r"]), top2),
             ("433 whip tip", math.hypot(*a433["pos"]) + a433["dia"] / 2, top2 + sma["len"] + a433["len"]),
-            ("920 whip tip", math.hypot(*a920["pos"]) + a920["dia"] / 2, top2 + sma["len"] + a920["len"]),
+            ("920 bracket, top", math.hypot(abs(a920["pos"][0]) + a920["mount"]["half_x"],
+                                            p["bay_half"][1] + a920["mount"]["out"]), a920["mount"]["z"][1]),
+            ("920 SMA jack", math.hypot(*a920["pos"]) + sma["dia"] / 2, a920["mount"]["z"][0]),
             ("tracker whip tip", math.hypot(*atrk["pos"]) + atrk["dia"] / 2, top2 + sma["len"] + atrk["len"]),
             ("zip-tie post, top row", math.hypot(p["clip"]["x"] + p["clip"]["gap"] / 2 + p["clip"]["post"],
                                                  p["bay_half"][1] + p["clip"]["out"]), p["clip"]["rows_z"][-1] + p["clip"]["tall"]),
@@ -799,6 +823,7 @@ def main():
     snapshot(asm, f("view_iso.png"), "*Isometric", 7)
     snapshot(asm, f("view_open_side.png"), "*Right", 4)
     snapshot(asm, f("view_side.png"), "*Top", 5)
+    snapshot(asm, f("view_antenna_side.png"), "*Bottom", 6)  # the -Y face with the 920 MHz antenna
     asm.ShowNamedView2("*Isometric", 7)
     noarg(asm, "ViewZoomtofit2")
 
