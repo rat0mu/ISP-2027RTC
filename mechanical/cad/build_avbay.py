@@ -1,4 +1,4 @@
-"""Generate the avionics bay concept model (avbay v0.4) in SOLIDWORKS.
+"""Generate the avionics bay concept model (avbay v0.10) in SOLIDWORKS.
 
 Layout
 - Bulkhead plate at the nose cone base carries everything.
@@ -6,10 +6,18 @@ Layout
   way a stack of round boards is normally held; nothing screws into the
   printed spine.
 - A 3D printed spine stands on the bulkhead inside the board slot. Its
-  lower part is an open channel holding four 18650 cells, reached from
-  the open (+X) side.
-- Above the boards the spine widens into two hollow equipment bays with
-  filleted transitions; modules and antennas mount on their flat faces.
+  lower part is an open channel holding four 18650 cells standing upright:
+  two welded pairs, each pair one behind the other along X so the channel
+  (and the board slot) stays narrow, with about 1 mm of sleeve room around
+  them. A pair slides out through the open (+X) side, which is closed by a
+  printed cover held with eight M3 screws.
+- Above the boards the spine widens (filleted neck) into one hollow
+  equipment bay of constant section. The competition's stock GPS tracker
+  stands inside it and slides in and out through the open +X side. The
+  other three faces carry screw bosses for small modules and zip-tie posts
+  for cables; a separate printed cap closes the top and carries the 433 MHz
+  and tracker antennas and the GPS patch. The 920 MHz antenna hangs down
+  along the -Y face from a small printed bracket.
 
 Drives a running SOLIDWORKS session through its COM API and writes native
 SLDPRT / SLDASM files plus preview images next to this script. All
@@ -18,9 +26,10 @@ dimensions live in PARAMS (mm).
 Requirements: Windows, SOLIDWORKS 2018 or later, Python 3.10+, pywin32.
 Usage:        python mechanical/cad/build_avbay.py [--out DIR]
 
-The nose cone is not modelled. Its inner profile, scaled from a low
-resolution sketch, is used only for the printed clearance report. Nothing
-here is a strength, thermal or manufacturing check.
+The nose cone itself is not part of the output; its inner profile (measured
+from NOSE_v1.SLDPRT) is used only for the printed clearance report, and
+fitcheck_nose.py places the result inside the real nose cone. Nothing here
+is a strength, thermal or manufacturing check.
 """
 
 from __future__ import annotations
@@ -35,7 +44,7 @@ import pythoncom
 import win32com.client
 from win32com.client import VARIANT
 
-VERSION = "v0_4"
+VERSION = "v0_10"
 PREFIX = f"avbay_{VERSION}_"
 
 # ---------------------------------------------------------------- parameters
@@ -52,16 +61,19 @@ PARAMS = {
     "nut_thk": 2.4,
     "spacer_od": 5.5,
     "spacer_base_len": 10.0,  # bulkhead -> first board
-    "spacer_len": 15.0,  # between boards
+    "spacer_len": 11.81,  # between boards = mated height of Samtec SFM/TFM, lead style -32
     "slot_clear": 1.0,  # board slot to spine wall
     "slot_corner_r": 6.0,
     "tip_r": 3.0,  # rounding of the two horseshoe tips
-    "conn_size": (22.0, 7.0),  # board-to-board connector placeholder, x by y
-    "conn_pos": (15.0, 36.0),  # its centre on the +Y arm (mirrored on -Y)
+    # board-to-board stacking connector placeholders (Samtec SFM/TFM, 1.27 mm, two rows);
+    # body sizes are estimates until samples are measured. x by y, centre at (x, +-y).
+    "conn_main": (31.0, 6.0),  # 2x20 on the +Y arm, main system bus
+    "conn_backup": (18.3, 6.0),  # 2x10 on the -Y arm, backup system bus
+    "conn_pos": (13.0, 36.0),
     # bulkhead
-    "bulkhead_dia": 138.0,
+    "bulkhead_dia": 130.0,  # NOSE_v1 shoulder bore is 132
     "bulkhead_thk": 6.0,
-    "retain_pcd": 128.0,  # 4 screws into the printed nose cone ring
+    "retain_pcd": 118.0,  # 4 screws into the printed nose cone ring
     "retain_hole": 4.3,  # M4 clearance
     "ubolt_spacing": 60.0,  # along Y, straddling the spine
     "ubolt_hole": 6.5,  # M6 clearance
@@ -70,36 +82,61 @@ PARAMS = {
     # spine: battery channel (U section, open toward +X)
     "cell_dia": 18.5,
     "cell_len": 65.0,
-    "cavity_x": (-10.0, 10.0),  # cavity depth, cell axis at x = 0
-    "cavity_half_y": 19.5,  # two cells side by side
+    "cavity_x": (-20.5, 20.5),  # two cells one behind the other along X, about 1 mm sleeve room
+    "cavity_half_y": 11.0,  # one cell wide, 1.75 mm per side for a sleeve
     "spine_wall": 3.0,
     "spine_corner_r": 5.0,  # rounding of the two back corners
-    "foot_x": (-25.0, 22.0),
+    "foot_x": (-27.0, 24.0),
+    "foot_half_y": 22.0,  # wider than the channel so the screws clear its walls
     "foot_thk": 4.0,
-    "foot_holes": [(-19.0, 15.0), (-19.0, -15.0), (16.0, 15.0), (16.0, -15.0)],
+    "foot_holes": [(-21.0, 17.5), (-21.0, -17.5), (18.0, 17.5), (18.0, -17.5)],
     "foot_hole": 4.3,  # M4 clearance
     "floor_thk": 3.0,
     "cell_gap": 2.0,  # contact space under each cell tier
+    # screwed side cover over the open (+X) face of the battery channel; lugs on
+    # the outside of the channel walls sit between the boards (rows are stations)
+    "cover": {"thk": 3.0, "end_gap": 0.5, "lug_len": 8.0, "lug_out": 6.0, "lug_tall": 8.0,
+              "rows_z": (23.5, 63.7, 96.0, 135.0), "pilot": 2.5, "screw_hole": 3.4,
+              "wire_half": 4.0, "wire_tall": 6.0, "floor_clear": 0.5},
     # spine: equipment bays (hollow, rounded boxes centred on the axis)
     "bay_wall": 4.0,
-    "bay1_z": (110.0, 168.0),  # stations of bay 1 bottom and top
-    "bay1_half": (34.0, 44.0),  # half size in x and y
-    "bay1_corner_r": 12.0,
-    "bay2_top_z": 238.0,
-    "bay2_half": (23.5, 33.5),
-    "bay2_corner_r": 10.0,
+    "bay_z": (110.0, 276.0),  # stations of the bay floor and top
+    "bay_half": (30.0, 40.0),  # half size in x and y, constant over the height
+    "bay_corner_r": 10.0,
     "neck_fillet": 8.0,  # channel walls into the bay 1 floor
-    "bay1_bottom_fillet": 6.0,
-    "step_fillet": 5.0,  # bay 1 top edge, bay 2 foot and bay 2 top edge
-    "bay2_window_z": (172.0, 230.0),  # access window in the +X wall of bay 2
-    "bay2_window_half_y": 20.0,
-    # nose cone inner surface (station from base, inner radius); not modelled,
-    # used only for the clearance report
-    "nose_profile": [
-        (0.0, 70.0), (34.2, 70.0), (59.7, 68.4), (85.1, 66.8), (110.6, 64.4),
-        (136.0, 61.3), (161.5, 57.3), (187.0, 54.1), (212.4, 48.5),
-        (237.9, 43.0), (263.3, 36.6), (288.8, 30.2), (314.2, 22.3),
-        (339.7, 14.3), (365.1, 6.4), (377.9, 0.0),
+    "bay_bottom_fillet": 6.0,
+    "bay_top_fillet": 5.0,
+    "window_z": (114.0, 268.0),  # opening in the +X wall: cells below, tracker above
+    "window_half_y": 34.0,
+    # stock GPS tracker (Rocket Beacon, potted box with 18650, LoRa + GNSS); size
+    # estimated from the technical note's pictures, not measured
+    "tracker": {"size": (32.0, 65.0, 110.0), "z": 158.0},  # x, y, z extents; stands on the axis
+    # antenna placeholders on the bay 2 top face: (x, y) centre, footprint, height
+    # flexible (rubber duck) antennas on the cap: (x, y) centre, diameter, length
+    "ant_433": {"pos": (0.0, 0.0), "dia": 6.0, "len": 150.0},  # backup system telemetry (DEC-001); on axis; a true quarter wave (~165) does not fit the tip
+    "ant_920": {"pos": (-2.0, -45.0), "dia": 6.0, "len": 80.0,  # main system telemetry (DEC-001)
+                "mount": {"z": (242.0, 250.0), "half_x": 5.0, "out": 10.0, "hole": 6.5}},  # bracket on the -Y face; SMA and whip hang below it
+    "ant_tracker": {"pos": (14.0, 14.0), "dia": 6.0, "len": 80.0},  # the tracker's own LoRa antenna (TW band)
+    "sma_base": {"dia": 8.0, "len": 10.0},  # SMA jack under each antenna
+    "gnss_patch": {"pos": (-17.5, 0.0), "size": (25.0, 25.0), "thk": 4.0},  # custom GPS
+    # removable top cap: plate on the wall tops, lip inside the walls, two screws into the Y walls
+    "cap": {"thk": 4.0, "lip": 3.0, "lip_clear": 0.3, "screw_hole": 2.7, "screw_y": 38.0, "ant_hole": 6.5},
+    # mounting bosses on the -X, +Y and -Y faces (M3 self-tapping), rows are stations
+    "boss": {"dia": 6.0, "hole": 2.5, "height": 3.0, "rows_z": (130.0, 170.0, 210.0, 250.0),
+             "y_face_x": (-12.5, 12.5), "x_face_y": (-15.0, 15.0)},
+    # zip-tie posts on the +Y and -Y faces: two 2.5 mm posts with a 4 mm gap, 8 mm tall
+    "clip": {"post": 2.5, "gap": 4.0, "tall": 8.0, "out": 6.0, "x": 10.0, "rows_z": (135.0, 175.0, 215.0, 250.0)},
+    # custom GPS board placeholder standing on the -X face bosses: thickness (x), width (y), height (z)
+    "gps_board": {"size": (8.0, 30.0, 45.0), "z": 190.0},
+    # nose cone inner surface (station from the open end, inner radius), measured
+    # from NOSE_v1.SLDPRT; used only for the clearance report (fitcheck_nose.py
+    # does the real geometric check)
+    "nose_profile": [  # NOSE_v1.SLDPRT inner surface, 80 mm shoulder then the ogive
+        (0.0, 66.0), (80.0, 66.0), (80.01, 70.0), (100.0, 69.8), (115.0, 69.3),
+        (135.0, 68.5), (155.0, 67.4), (170.0, 66.0), (190.0, 64.3), (205.0, 62.3),
+        (225.0, 60.0), (240.0, 57.4), (260.0, 54.5), (280.0, 51.3), (295.0, 47.8),
+        (315.0, 44.0), (330.0, 39.9), (350.0, 35.5), (370.0, 30.7), (385.0, 25.7),
+        (405.0, 20.3), (425.0, 14.6), (440.0, 8.6), (460.0, 2.3), (465.0, 0.0),
     ],
 }
 
@@ -113,6 +150,7 @@ COLORS = {  # r, g, b, transparency
     "conn": (0.08, 0.08, 0.08, 0.0),
     "spine": (0.36, 0.37, 0.4, 0.0),
     "cell": (0.15, 0.4, 0.85, 0.0),
+    "cover": (0.85, 0.45, 0.1, 0.35),
 }
 
 
@@ -167,6 +205,26 @@ def extrude(model, depth_mm, offset_mm=0.0):
     model.SketchManager.AddToDB = False
     if feat is None:
         raise RuntimeError("extrusion failed")
+    return feat
+
+
+def side_boss(model, plane_index, sketch, depth_mm, offset_mm, negative):
+    """Boss standing on a face parallel to the Top plane (index 1, faces at
+    y = +-offset) or the Right plane (index 2, faces at x = +-offset).
+
+    Sketch mapping measured on this SOLIDWORKS: Top plane (x, y) -> model
+    (X, -Z), extrudes along +Y; Right plane (x, y) -> model (-Z, Y), extrudes
+    along +X. `negative` flips both the start offset and the direction, which
+    puts the boss on the -Y / -X face.
+    """
+    sm = start_sketch(model, plane_index)
+    sketch(sm)
+    feat = model.FeatureManager.FeatureExtrusion2(
+        True, False, negative, 0, 0, depth_mm * MM, 0.0, False, False, False, False,
+        0.0, 0.0, False, False, False, False, True, True, True, 3, offset_mm * MM, negative)
+    model.SketchManager.AddToDB = False
+    if feat is None:
+        raise RuntimeError("side boss failed")
     return feat
 
 
@@ -372,8 +430,7 @@ def build_spine(sw, tpl, path, p, tiers):
     cap = p["cell_gap"] + 1.0  # air above a cell tier before its floor
     channel_top = tiers[-1][1] + cap + p["floor_thk"]
     w = p["bay_wall"]
-    (b1z0, b1z1), (b1x, b1y), b1r = p["bay1_z"], p["bay1_half"], p["bay1_corner_r"]
-    b2z1, (b2x, b2y), b2r = p["bay2_top_z"], p["bay2_half"], p["bay2_corner_r"]
+    (bz0, bz1), (bx, by), br = p["bay_z"], p["bay_half"], p["bay_corner_r"]
     model = sw.NewDocument(tpl, 0, 0, 0)
     print("  spine")
 
@@ -384,7 +441,7 @@ def build_spine(sw, tpl, path, p, tiers):
     fillet(model, p["spine_corner_r"], vertical_at([(xb, hy_out), (xb, -hy_out)]), "channel back corners")
 
     sm = start_sketch(model)  # foot
-    rect(sm, p["foot_x"][0], -hy_out, p["foot_x"][1], hy_out)
+    rect(sm, p["foot_x"][0], -p["foot_half_y"], p["foot_x"][1], p["foot_half_y"])
     for x, y in p["foot_holes"]:
         circle(sm, x, y, p["foot_hole"])
     extrude(model, p["foot_thk"])
@@ -394,50 +451,151 @@ def build_spine(sw, tpl, path, p, tiers):
         rect(sm, cx0 - 0.5, -hy_in - 0.5, cx1, hy_in + 0.5)
         extrude(model, p["floor_thk"], z_top + cap - base)
 
-    sm = start_sketch(model)  # bay 1 floor
-    rounded_rect(sm, b1x, b1y, b1r)
-    extrude(model, w, b1z0 - base)
-    sm = start_sketch(model)  # bay 1 walls
-    rounded_rect(sm, b1x, b1y, b1r)
-    rounded_rect(sm, b1x - w, b1y - w, b1r - w)
-    extrude(model, b1z1 - b1z0 - 2 * w, b1z0 + w - base)
-    sm = start_sketch(model)  # bay 1 roof
-    rounded_rect(sm, b1x, b1y, b1r)
-    extrude(model, w, b1z1 - w - base)
-    sm = start_sketch(model)  # bay 2 walls
-    rounded_rect(sm, b2x, b2y, b2r)
-    rounded_rect(sm, b2x - w, b2y - w, b2r - w)
-    extrude(model, b2z1 - b1z1 - w, b1z1 - base)
-    sm = start_sketch(model)  # bay 2 top
-    rounded_rect(sm, b2x, b2y, b2r)
-    extrude(model, w, b2z1 - w - base)
+    sm = start_sketch(model)  # bay floor
+    rounded_rect(sm, bx, by, br)
+    extrude(model, w, bz0 - base)
+    sm = start_sketch(model)  # bay walls
+    rounded_rect(sm, bx, by, br)
+    rounded_rect(sm, bx - w, by - w, br - w)
+    extrude(model, bz1 - bz0 - 2 * w, bz0 + w - base)
 
     def on_channel(x, y):  # outer faces of the channel: back and both sides
         return ((near(abs(y), hy_out) and xb - TOL <= x <= xf + TOL)
                 or (near(x, xb) and abs(y) <= hy_out + TOL))
 
-    fillet(model, p["neck_fillet"], loop_at(b1z0 - base, on_channel), "channel into bay 1 floor")
-    fillet(model, p["bay1_bottom_fillet"], loop_at(b1z0 - base, on_box(b1x, b1y)), "bay 1 bottom edge")
-    fillet(model, p["step_fillet"], loop_at(b1z1 - base, on_box(b1x, b1y)), "bay 1 top edge")
-    fillet(model, p["step_fillet"], loop_at(b1z1 - base, on_box(b2x, b2y)), "bay 2 foot")
-    fillet(model, p["step_fillet"], loop_at(b2z1 - base, on_box(b2x, b2y)), "bay 2 top edge")
+    fillet(model, p["neck_fillet"], loop_at(bz0 - base, on_channel), "channel into bay floor")
+    fillet(model, p["bay_bottom_fillet"], loop_at(bz0 - base, on_box(bx, by)), "bay bottom edge")
 
-    # reopen the cell channel through the bay 1 floor and out through its +X wall
+    # reopen the cell channel through the bay floor
     z0, z1 = tiers[-1][0] - p["cell_gap"], tiers[-1][1] + cap
     sm = start_sketch(model)
-    rect(sm, cx0, -hy_in, b1x + 5.0, hy_in)
+    rect(sm, cx0, -hy_in, bx + 5.0, hy_in)
     cut(model, z1 - z0, z0 - base)
-    # join the two bays: open the bay 1 roof inside the bay 2 walls
+    # let the side cover (as wide as the channel) pass through the bay floor
+    cv = p["cover"]
     sm = start_sketch(model)
-    rounded_rect(sm, b2x - w, b2y - w, b2r - w)
-    cut(model, 2 * w, b1z1 - w - 1.0 - base)
-    # access window in the +X wall of bay 2
-    wz0, wz1 = p["bay2_window_z"]
+    rect(sm, xf, -hy_out - cv["floor_clear"], bx + 5.0, hy_out + cv["floor_clear"])
+    cut(model, w + 1.5, bz0 - 1.0 - base)
+    # one opening in the +X wall: cell access below, tracker access above
+    wz0, wz1 = p["window_z"]
     sm = start_sketch(model)
-    rect(sm, b2x - w - 2.0, -p["bay2_window_half_y"], b2x + 5.0, p["bay2_window_half_y"])
+    rect(sm, bx - w - 2.0, -p["window_half_y"], bx + 5.0, p["window_half_y"])
     cut(model, wz1 - wz0, wz0 - base)
+    # cap screw holes down into the +Y / -Y wall tops
+    cap = p["cap"]
+    wall_top = bz1 - cap["thk"]
+    sm = start_sketch(model)
+    for y in (cap["screw_y"], -cap["screw_y"]):
+        circle(sm, 0.0, y, cap["screw_hole"] - 0.4)  # pilot for a self-tapping screw
+    cut(model, 8.0, wall_top - 8.0 - base)
+
+    # mounting bosses: +Y and -Y faces (Top plane: sketch y = -(z - base)), -X face (Right plane: sketch x = -(z - base))
+    bo = p["boss"]
+    for negative in (False, True):
+        def bosses_y(sm, negative=negative):
+            for x in bo["y_face_x"]:
+                for z in bo["rows_z"]:
+                    circle(sm, x, -(z - base), bo["dia"])
+                    circle(sm, x, -(z - base), bo["hole"])
+        side_boss(model, 1, bosses_y, bo["height"], by, negative)
+    def bosses_x(sm):
+        for y in bo["x_face_y"]:
+            for z in bo["rows_z"]:
+                circle(sm, -(z - base), y, bo["dia"])
+                circle(sm, -(z - base), y, bo["hole"])
+    side_boss(model, 2, bosses_x, bo["height"], bx, True)
+
+    # cover screw lugs on the outside of the channel walls (Right plane, extruded along +X)
+    def lugs(sm):
+        for z in cv["rows_z"]:
+            for sign in (1, -1):
+                y0, y1 = sorted((sign * (hy_out - 0.5), sign * (hy_out + cv["lug_out"])))
+                rect(sm, -(z + cv["lug_tall"] / 2 - base), y0, -(z - cv["lug_tall"] / 2 - base), y1)
+                circle(sm, -(z - base), sign * (hy_out + cv["lug_out"] / 2), cv["pilot"])
+    side_boss(model, 2, lugs, cv["lug_len"], xf - cv["lug_len"], False)
+
+    # bracket for the side-mounted 920 MHz antenna on the -Y face, with a vertical hole for the SMA jack
+    a9 = p["ant_920"]
+    mz0, mz1 = a9["mount"]["z"]
+    mx, mh = a9["pos"][0], a9["mount"]["half_x"]
+    side_boss(model, 1, lambda sm: rect(sm, mx - mh, -(mz0 - base), mx + mh, -(mz1 - base)),
+              a9["mount"]["out"], by, True)
+    sm = start_sketch(model)
+    circle(sm, *a9["pos"], a9["mount"]["hole"])
+    cut(model, mz1 - mz0 + 2.0, mz0 - 1.0 - base)
+
+    # zip-tie posts on the +Y and -Y faces
+    cl = p["clip"]
+    for negative in (False, True):
+        def posts(sm):
+            for z in cl["rows_z"]:
+                for x0 in (cl["x"] - cl["gap"] / 2 - cl["post"], cl["x"] + cl["gap"] / 2):
+                    rect(sm, x0, -(z - base), x0 + cl["post"], -(z + cl["tall"] - base))
+        side_boss(model, 1, posts, cl["out"], by, negative)
 
     set_color(model, "spine")
+    save(model, path)
+    return model
+
+
+def build_cap(sw, tpl, path, p):
+    """Removable top cap: lip (z 0..lip) that sits inside the bay walls, then
+    the plate with antenna and screw holes; top edge filleted."""
+    (bx, by), br, w, cap = p["bay_half"], p["bay_corner_r"], p["bay_wall"], p["cap"]
+    c = w + cap["lip_clear"]
+    model = sw.NewDocument(tpl, 0, 0, 0)
+    sm = start_sketch(model)  # lip
+    rounded_rect(sm, bx - c, by - c, br - c)
+    extrude(model, cap["lip"])
+    sm = start_sketch(model)  # plate
+    rounded_rect(sm, bx, by, br)
+    for y in (cap["screw_y"], -cap["screw_y"]):
+        circle(sm, 0.0, y, cap["screw_hole"])
+    for key in ("ant_433", "ant_tracker"):  # the 920 MHz antenna is on the -Y face
+        circle(sm, *p[key]["pos"], cap["ant_hole"])
+    extrude(model, cap["thk"], cap["lip"])
+    print("  cap")
+    fillet(model, p["bay_top_fillet"], loop_at(cap["lip"] + cap["thk"], on_box(bx, by)), "cap top edge")
+    set_color(model, "spine")
+    save(model, path)
+    return model
+
+
+def cover_span(p, tiers):
+    """Stations of the side cover: just above the foot to the top of the channel."""
+    z0 = p["bulkhead_thk"] + p["foot_thk"] + p["cover"]["end_gap"]
+    z1 = tiers[-1][1] + p["cell_gap"] + 1.0 + p["floor_thk"] - p["cover"]["end_gap"]
+    return z0, z1
+
+
+def build_cover(sw, tpl, path, p, tiers):
+    """Side cover of the battery channel, modelled in assembly coordinates
+    (stations from the nose cone base): a plate on the open face with an ear
+    and a screw hole at each lug, a notch at the bottom for the backup pack
+    leads and a window above the middle floor for the main pack leads."""
+    s, cv = spine_dims(p), p["cover"]
+    hw, he = s["half_y"], s["half_y"] + cv["lug_out"]
+    z0, z1 = cover_span(p, tiers)
+    t2 = cv["lug_tall"] / 2
+    right = [(hw, z0)]
+    for z in cv["rows_z"]:
+        right += [(hw, z - t2), (he, z - t2), (he, z + t2), (hw, z + t2)]
+    right.append((hw, z1))
+    left = [(-y, z) for y, z in reversed(right)]
+    wh, wt = cv["wire_half"], cv["wire_tall"]
+    outline = right + left + [(-wh, z0), (-wh, z0 + wt), (wh, z0 + wt), (wh, z0)]
+    main_z = tiers[-1][0] - p["cell_gap"]  # bottom of the main pack's contact space
+    model = sw.NewDocument(tpl, 0, 0, 0)
+
+    def sketch(sm):  # Right plane: sketch (x, y) -> model (-Z, Y)
+        polygon(sm, [(-z, y) for y, z in outline])
+        rect(sm, -(main_z + wt), -wh, -main_z, wh)
+        for z in cv["rows_z"]:
+            for sign in (1, -1):
+                circle(sm, -z, sign * (hw + cv["lug_out"] / 2), cv["screw_hole"])
+    side_boss(model, 2, sketch, cv["thk"], s["x_front"], False)
+    print("  cell_cover")
+    set_color(model, "cover")
     save(model, path)
     return model
 
@@ -488,10 +646,13 @@ def main():
     def f(name):
         return os.path.join(out, PREFIX + name)
 
-    names = ["bulkhead.SLDPRT", "pcb_outline.SLDPRT", "spacer_m3_10.SLDPRT", "spacer_m3_15.SLDPRT",
-             "rod_m3.SLDPRT", "nut_m3.SLDPRT", "stack_connector.SLDPRT", "spine.SLDPRT",
-             "cell_18650.SLDPRT", "assembly.SLDASM", "view_iso.png", "view_open_side.png",
-             "view_side.png"]
+    names = ["bulkhead.SLDPRT", "pcb_outline.SLDPRT", "spacer_m3_10.SLDPRT", "spacer_m3_stack.SLDPRT",
+             "rod_m3.SLDPRT", "nut_m3.SLDPRT", "stack_connector_2x20.SLDPRT", "stack_connector_2x10.SLDPRT",
+             "spine.SLDPRT",
+             "cell_18650.SLDPRT", "ant_433.SLDPRT", "ant_920.SLDPRT", "ant_tracker.SLDPRT",
+             "sma_base.SLDPRT", "gnss_patch.SLDPRT", "tracker.SLDPRT", "cap.SLDPRT", "gps_board.SLDPRT",
+             "cell_cover.SLDPRT", "assembly.SLDASM", "view_iso.png", "view_antenna_side.png",
+             "view_open_side.png", "view_side.png"]
     for n in names:
         if os.path.exists(f(n)):
             os.remove(f(n))
@@ -530,21 +691,38 @@ def main():
     pcb = build_pcb(sw, part_tpl, f("pcb_outline.SLDPRT"), p)
     sp10 = build_disc(sw, part_tpl, f("spacer_m3_10.SLDPRT"), p["spacer_od"], p["spacer_base_len"],
                       [hole(p["rod_hole"])], "spacer")
-    sp15 = build_disc(sw, part_tpl, f("spacer_m3_15.SLDPRT"), p["spacer_od"], p["spacer_len"],
+    sp15 = build_disc(sw, part_tpl, f("spacer_m3_stack.SLDPRT"), p["spacer_od"], p["spacer_len"],
                       [hole(p["rod_hole"])], "spacer")
     rod = build_disc(sw, part_tpl, f("rod_m3.SLDPRT"), p["rod_dia"], rod_len, [], "steel")
     nut = build_disc(sw, part_tpl, f("nut_m3.SLDPRT"), p["nut_dia"], p["nut_thk"], [hole(p["rod_hole"])], "steel")
-    conn = build_block(sw, part_tpl, f("stack_connector.SLDPRT"), p["conn_size"][0], p["conn_size"][1],
+    conn = build_block(sw, part_tpl, f("stack_connector_2x20.SLDPRT"), p["conn_main"][0], p["conn_main"][1],
                        p["spacer_len"], "conn")
+    conn_b = build_block(sw, part_tpl, f("stack_connector_2x10.SLDPRT"), p["conn_backup"][0], p["conn_backup"][1],
+                         p["spacer_len"], "conn")
     spine = build_spine(sw, part_tpl, f("spine.SLDPRT"), p, tiers)
     cell = build_disc(sw, part_tpl, f("cell_18650.SLDPRT"), p["cell_dia"], p["cell_len"], [], "cell")
+    cover = build_cover(sw, part_tpl, f("cell_cover.SLDPRT"), p, tiers)
+    a433, a920, atrk = p["ant_433"], p["ant_920"], p["ant_tracker"]
+    sma, patch, trk = p["sma_base"], p["gnss_patch"], p["tracker"]
+    whip433 = build_disc(sw, part_tpl, f("ant_433.SLDPRT"), a433["dia"], a433["len"], [], "conn")
+    whip920 = build_disc(sw, part_tpl, f("ant_920.SLDPRT"), a920["dia"], a920["len"], [], "conn")
+    sma_base = build_disc(sw, part_tpl, f("sma_base.SLDPRT"), sma["dia"], sma["len"], [], "spacer")
+    gnss_patch = build_block(sw, part_tpl, f("gnss_patch.SLDPRT"), patch["size"][0], patch["size"][1], patch["thk"], "conn")
+    whip_trk = build_disc(sw, part_tpl, f("ant_tracker.SLDPRT"), atrk["dia"], atrk["len"], [], "conn")
+    tracker = build_block(sw, part_tpl, f("tracker.SLDPRT"), trk["size"][0], trk["size"][1], trk["size"][2], "conn")
+    cap_part = build_cap(sw, part_tpl, f("cap.SLDPRT"), p)
+    gb = p["gps_board"]
+    gps_board = build_block(sw, part_tpl, f("gps_board.SLDPRT"), gb["size"][0], gb["size"][1], gb["size"][2], "pcb")
 
     for label, model in (("bulkhead", bulkhead), ("pcb_outline", pcb), ("spacer_m3_10", sp10),
-                         ("spacer_m3_15", sp15), ("rod_m3", rod), ("nut_m3", nut),
-                         ("stack_connector", conn), ("spine", spine), ("cell_18650", cell)):
+                         ("spacer_m3_stack", sp15), ("rod_m3", rod), ("nut_m3", nut),
+                         ("stack_connector_2x20", conn), ("stack_connector_2x10", conn_b), ("spine", spine), ("cell_18650", cell),
+                         ("ant_433", whip433), ("ant_920", whip920), ("sma_base", sma_base),
+                         ("ant_tracker", whip_trk), ("gnss_patch", gnss_patch), ("tracker", tracker),
+                         ("cap", cap_part), ("gps_board", gps_board), ("cell_cover", cover)):
         print(f"  {label:16s} box [xmin ymin zmin xmax ymax zmax] mm = {box_mm(model)}")
     sb = box_mm(spine)
-    if sb[2] < -0.01 or abs(sb[5] - (p["bay2_top_z"] - base)) > 0.01:
+    if sb[2] < -0.01 or abs(sb[5] - (p["bay_z"][1] - p["cap"]["thk"] - base)) > 0.01:
         raise RuntimeError("spine features were offset in the wrong direction")
     bodies = spine.GetBodies2(0, False)
     volume = noarg(spine.Extension, "CreateMassProperty").Volume * 1e6
@@ -563,14 +741,27 @@ def main():
         comps.append((f"pcb_layer_{i}", place(sw, asm, f("pcb_outline.SLDPRT"), z)))
         if i < len(pcb_z):
             for x, y in rods:
-                comps.append((f"spacer_above_{i}", place(sw, asm, f("spacer_m3_15.SLDPRT"), z + p["pcb_thk"], x, y)))
-            for y in (cy, -cy):
-                comps.append((f"connector_above_{i}",
-                              place(sw, asm, f("stack_connector.SLDPRT"), z + p["pcb_thk"], cx, y)))
-    cell_y = p["cell_dia"] / 2 + 0.35
+                comps.append((f"spacer_above_{i}", place(sw, asm, f("spacer_m3_stack.SLDPRT"), z + p["pcb_thk"], x, y)))
+            for part, y in (("stack_connector_2x20.SLDPRT", cy), ("stack_connector_2x10.SLDPRT", -cy)):
+                comps.append((f"connector_above_{i}", place(sw, asm, f(part), z + p["pcb_thk"], cx, y)))
+    cell_x = p["cell_dia"] / 2 + 0.75
     for i, (z0, _) in enumerate(tiers, start=1):
-        for y in (cell_y, -cell_y):
-            comps.append((f"cell_tier_{i}", place(sw, asm, f("cell_18650.SLDPRT"), z0, 0.0, y)))
+        for x in (cell_x, -cell_x):
+            comps.append((f"cell_tier_{i}", place(sw, asm, f("cell_18650.SLDPRT"), z0, x, 0.0)))
+    comps.append(("cell_cover", place(sw, asm, f("cell_cover.SLDPRT"), 0.0)))
+    top2 = p["bay_z"][1]
+    comps.append(("cap", place(sw, asm, f("cap.SLDPRT"), top2 - p["cap"]["thk"] - p["cap"]["lip"])))
+    comps.append(("gps_board", place(sw, asm, f("gps_board.SLDPRT"), gb["z"],
+                                     -p["bay_half"][0] - p["boss"]["height"] - gb["size"][0] / 2, 0.0)))
+    for key, part in (("ant_433", "ant_433.SLDPRT"), ("ant_tracker", "ant_tracker.SLDPRT")):
+        x, y = p[key]["pos"]
+        comps.append((key + "_sma", place(sw, asm, f("sma_base.SLDPRT"), top2, x, y)))
+        comps.append((key, place(sw, asm, f(part), top2 + sma["len"], x, y)))
+    z_sma = a920["mount"]["z"][0] - sma["len"]  # side antenna hangs below its bracket
+    comps.append(("ant_920_sma", place(sw, asm, f("sma_base.SLDPRT"), z_sma, *a920["pos"])))
+    comps.append(("ant_920", place(sw, asm, f("ant_920.SLDPRT"), z_sma - a920["len"], *a920["pos"])))
+    comps.append(("gnss_patch", place(sw, asm, f("gnss_patch.SLDPRT"), top2, *patch["pos"])))
+    comps.append(("tracker", place(sw, asm, f("tracker.SLDPRT"), trk["z"])))
     noarg(asm, "EditRebuild3")
 
     print("component stations (z min .. z max, mm):")
@@ -609,8 +800,17 @@ def main():
     for label, radius, z in (
             ("bulkhead top edge", p["bulkhead_dia"] / 2, base),
             ("top board edge", p["pcb_dia"] / 2, stack_top),
-            ("bay 1 corner, top", reach(*p["bay1_half"], p["bay1_corner_r"]), p["bay1_z"][1]),
-            ("bay 2 corner, top", reach(*p["bay2_half"], p["bay2_corner_r"]), p["bay2_top_z"])):
+            ("bay corner, bottom", reach(*p["bay_half"], p["bay_corner_r"]), p["bay_z"][0]),
+            ("bay corner, top", reach(*p["bay_half"], p["bay_corner_r"]), top2),
+            ("433 whip tip", math.hypot(*a433["pos"]) + a433["dia"] / 2, top2 + sma["len"] + a433["len"]),
+            ("920 bracket, top", math.hypot(abs(a920["pos"][0]) + a920["mount"]["half_x"],
+                                            p["bay_half"][1] + a920["mount"]["out"]), a920["mount"]["z"][1]),
+            ("920 SMA jack", math.hypot(*a920["pos"]) + sma["dia"] / 2, a920["mount"]["z"][0]),
+            ("tracker whip tip", math.hypot(*atrk["pos"]) + atrk["dia"] / 2, top2 + sma["len"] + atrk["len"]),
+            ("zip-tie post, top row", math.hypot(p["clip"]["x"] + p["clip"]["gap"] / 2 + p["clip"]["post"],
+                                                 p["bay_half"][1] + p["clip"]["out"]), p["clip"]["rows_z"][-1] + p["clip"]["tall"]),
+            ("GPS board outer edge", math.hypot(p["bay_half"][0] + p["boss"]["height"] + gb["size"][0], gb["size"][1] / 2),
+             gb["z"] + gb["size"][2])):
         print(f"  {label:22s} z={z:6.1f}  part r={radius:5.1f}  cone r={inner_radius(z):5.1f}"
               f"  clearance={inner_radius(z) - radius:5.1f}")
 
@@ -623,9 +823,14 @@ def main():
     snapshot(asm, f("view_iso.png"), "*Isometric", 7)
     snapshot(asm, f("view_open_side.png"), "*Right", 4)
     snapshot(asm, f("view_side.png"), "*Top", 5)
+    snapshot(asm, f("view_antenna_side.png"), "*Bottom", 6)  # the -Y face with the 920 MHz antenna
     asm.ShowNamedView2("*Isometric", 7)
     noarg(asm, "ViewZoomtofit2")
 
+    cz0, cz1 = cover_span(p, tiers)
+    print(f"side cover: x {s['x_front']:.1f}..{s['x_front'] + p['cover']['thk']:.1f}, z {cz0:.1f}..{cz1:.1f}, "
+          f"lug rows {p['cover']['rows_z']}")
+    print(f"board slot: width {2 * slot_half:.1f}, from x = {s['x_back'] - p['slot_clear']:.1f}")
     print("total components:", len(comps))
     print("cell tiers (z):", [(round(a, 1), round(b, 1)) for a, b in tiers])
     print("written to", out)
