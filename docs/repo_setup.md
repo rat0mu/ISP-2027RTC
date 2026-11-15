@@ -78,7 +78,7 @@ python tools/check_docs.py
 
 ## 7. 完成第一個任務
 
-依照 [快速開始](usage.md) 承接 Issue、開分支、修改、commit、push 並建立 PR。建議起始任務見 [首次工作清單](first_tasks.md)。
+依照 [快速開始](usage.md) 承接 Issue、開分支、修改、commit、push 並建立 PR。
 
 ## 如果偏好圖形介面
 

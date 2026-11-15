@@ -24,7 +24,6 @@
 | [介面規格](interfaces.md) | 電氣、通訊、資料與機構介面；目前為草案 |
 | [設計決策](decisions.md) | 重大選擇的理由、代價與影響 |
 | [元件選型總表](component_selection.md) | 主備系統 MCU、感測器、GNSS 與無線電目前的選擇；隨時更新 |
-| [航電研發路徑圖](avionics_roadmap.md) | 航電從設計到比賽的階段、驗收與風險；目前為草案 |
 | [工程基本規則](engineering_rules.md) | 命名、路徑、程式與驗證基本要求 |
 | [測試與版本](testing.md) | 驗證程度、結果紀錄與里程碑 |
 | [維護者指南](maintainer_guide.md) | 權限、分支保護、責任安排與初始化清單 |
@@ -40,4 +39,3 @@
 
 - [文件自動檢查](automation.md)：本機命令與 GitHub CI。
 - [文件範本](templates/README.md)：設計說明、測試與里程碑紀錄。
-- [首次工作清單](first_tasks.md)：初期可承接的任務。
