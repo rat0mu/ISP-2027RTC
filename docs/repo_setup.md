@@ -1,6 +1,6 @@
 # 新成員初始化指南
 
-團隊 repo 已經建立。本指南給新加入的成員，說明第一次在自己電腦上準備專案的步驟：取得專案、設定提交身分、確認內容與權限。完成後接著看 [快速開始](usage.md) 走第一個任務。
+團隊 repo 已經建立。本指南給新加入的成員，說明第一次在自己電腦上準備專案的步驟：取得專案、設定提交身分、確認內容與權限。完成後接著看 [協作流程範例](workflow_examples.md) 走第一個任務。
 
 不需要自己建立 repo、執行 git init 或推送初始提交；這些已由維護者完成。
 
@@ -8,7 +8,7 @@
 
 - 自己的 GitHub 帳號，並把帳號名稱告訴維護者，請他邀請你成為協作者。
 - 收到邀請後，到 GitHub 或 Email 接受邀請；接受前只能 clone 公開內容，無法推送分支。
-- 安裝 Git，Windows 可使用 Git Bash 或 VS Code 終端機。工具需求詳見 [環境設定](installation.md)。
+- 安裝 Git，Windows 可使用 Git Bash 或 VS Code 終端機。
 
 確認 Git 可以使用：
 
@@ -64,21 +64,20 @@ git branch --show-current
 python tools/check_docs.py
 ~~~
 
-看到 `[OK]` 與 0 errors 表示文件連結正常。只編輯文件時不一定要先安裝 Python，也可看 PR 上的遠端檢查結果；實際審查仍需閱讀內容。詳見 [自動檢查](automation.md)。
+看到 `[OK]` 與 0 errors 表示文件連結正常。只編輯文件時不一定要先安裝 Python，也可看 PR 上的遠端檢查結果；實際審查仍需閱讀內容。詳見 [文件檢查工具](../tools/README.md)。
 
 ## 6. 閱讀必要文件
 
 開始第一個任務前，依序閱讀：
 1. [README](../README.md)：專案概要與開發流程。
 2. [協作規範](../CONTRIBUTING.md)：分支、提交、PR 與審查要求。
-3. [團隊分工](team.md)：確認自己負責的模組與審查人。
-4. 自己負責模組的目錄 README。
+3. 自己負責模組的目錄 README。
 
 尚未決定的 MCU、腳位與工具版本以各文件標示的狀態為準，不要依範例自行假設。
 
 ## 7. 完成第一個任務
 
-依照 [快速開始](usage.md) 承接 Issue、開分支、修改、commit、push 並建立 PR。
+依照 [協作流程範例](workflow_examples.md) 的範例一承接 Issue、開分支、修改、commit、push 並建立 PR。
 
 ## 如果偏好圖形介面
 
