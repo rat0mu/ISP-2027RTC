@@ -9,11 +9,11 @@
 - Git、GitHub 帳號與文字編輯器。
 - 參與開發時所需的儲存庫權限與審查安排。
 
-各子系統的開發工具將隨實作補充，詳見 [環境設定](docs/installation.md)。
+各子系統的開發工具將隨實作補充，記錄在各目錄的 README。
 
 ## 使用方式
 
-新成員請先依照 [新成員初始化指南](docs/repo_setup.md) 準備本機環境，再從 [快速開始](docs/usage.md) 走第一個任務。
+新成員請先依照 [新成員初始化指南](docs/repo_setup.md) 準備本機環境，再依 [協作流程範例](docs/workflow_examples.md) 走第一個任務。
 
 取得專案後，可先確認本機狀態與目前分支：
 
@@ -26,9 +26,9 @@ git branch --show-current
 
 ## 相關文件
 
-- [文件索引](docs/README.md)：目錄用途、架構、介面與團隊分工。
+- [文件索引](docs/README.md)：架構、介面、設計決策與協作流程。
 - [協作規範](CONTRIBUTING.md)：分支、提交、PR 與審查要求。
-- [測試與版本](docs/testing.md) · [常見問題](docs/troubleshooting.md)。
+- [測試與版本](docs/testing.md) · [常見問題](docs/git_workflow.md#常見問題)。
 
 ## 授權
 

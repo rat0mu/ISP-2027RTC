@@ -273,7 +273,7 @@ git commit -m "feat: 依樣品實測更新 avbay 接頭佔位與層距"
 | 做到一半發現另一個問題 | 另開一個 Issue 記下來，不要塞進目前的 PR |
 | 任務比想像中大 | 在 Issue 留言說明，拆成幾個較小的 Issue |
 | 還沒做完但想讓別人先看 | 開 Draft PR |
-| main 更新了，和我的分支有衝突 | 先提交自己的成果，再 `git merge origin/main`，理解兩邊目的後解決；見 [常見問題](troubleshooting.md) |
+| main 更新了，和我的分支有衝突 | 先提交自己的成果，再 `git merge origin/main`，理解兩邊目的後解決；見 [常見問題](git_workflow.md#常見問題) |
 | 只改一個錯字 | 可以不開 Issue，直接開 PR，在 PR 說明寫清楚 |
 | 沒有適用的測試 | 驗證欄寫「不適用」並說明原因，不要留空 |
 | 審查人太久沒回 | 在 PR 留言提醒，或在例會提出；不要自己合併 |

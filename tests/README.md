@@ -13,4 +13,4 @@
 
 CI 建立前先在另一位組員的環境重現測試。需要的 CSV 樣本可進版控；臨時輸出放 output/。不要以固定成功退出的診斷程式作為合併檢查。
 
-必要小型輸入放在 [fixtures/](fixtures/README.md)。本模板已有 [文件連結檢查](../docs/automation.md)，但尚無航電功能測試。測試紀錄格式見 [範本](../docs/templates/test_report.md)。
+必要小型輸入放在 [fixtures/](fixtures/README.md)。本模板已有 [文件連結檢查](../tools/README.md)，但尚無航電功能測試。
