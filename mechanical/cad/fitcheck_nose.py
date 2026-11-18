@@ -81,27 +81,46 @@ def main():
     radius, z_tip = inner_profile(nose, length)
     print(f"nose: length {length:.1f} mm, inner tip at z = {z_tip:.0f} mm")
 
-    if sw.OpenDoc(avbay_path, 2) is None:  # an assembly must be loaded before it can be inserted
+    avbay_doc = sw.OpenDoc(avbay_path, 2)  # an assembly must be loaded before it can be inserted
+    if avbay_doc is None:
         raise SystemExit(f"could not open {avbay_path}")
+    avbay_front = b.ref_planes(avbay_doc)[0].Name  # names differ with the SOLIDWORKS language
+    avbay_axis, feat = None, noarg(avbay_doc, "FirstFeature")
+    while feat is not None:
+        if noarg(feat, "GetTypeName2") == "RefAxis":
+            avbay_axis = feat.Name
+        feat = noarg(feat, "GetNextFeature")
+    if avbay_axis is None:
+        raise SystemExit("the avbay assembly has no reference axis; rebuild it with build_avbay.py")
+    lock_parts = [os.path.join(here, b.PREFIX + name + ".SLDPRT")
+                  for name in ("nose_lock", "nose_lock_key", "nose_gasket", "nose_centering_ring")]
+    for path in lock_parts:  # a document must be loaded before it can be inserted
+        if sw.OpenDoc(path, 1) is None:
+            raise SystemExit(f"could not open {path}")
     if os.path.exists(out):
         os.remove(out)
     asm = sw.NewDocument(b.find_template("assembly 0251mm to 1000mm.asmdot"), 0, 0, 0)
     mu = noarg(sw, "GetMathUtility")
     mu._FlagAsMethod("CreateTransform")
 
-    def add(path, matrix):
+    def add(path, matrix, fixed=True):
         comp = asm.AddComponent5(path, 0, "", False, "", 0.0, 0.0, 0.0)
         if comp is None:
             raise RuntimeError(f"could not insert {path}")
         comp.Select2(False, 0)
         noarg(asm, "UnfixComponent")
         comp.Transform2 = mu.CreateTransform(VARIANT(pythoncom.VT_ARRAY | pythoncom.VT_R8, matrix))
-        comp.Select2(False, 0)
-        noarg(asm, "FixComponent")
+        if fixed:
+            comp.Select2(False, 0)
+            noarg(asm, "FixComponent")
         asm.ClearSelection2(True)
         return comp
 
-    add(avbay_path, [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0])
+    off = b.nose_lock_offset(b.PARAMS)  # the bulkhead sits above the twist-lock lugs
+    # the avbay is left floating and held by two mates, so it can be dragged in and out and turned
+    avbay_comp = add(avbay_path, [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, off * MM, 1, 0, 0, 0], fixed=False)
+    for path in lock_parts:  # built in nose cone coordinates
+        add(path, [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0])
     # part +X (tip -> open end) maps to assembly -Z: open end on z = 0, tip at z = length
     nose_comp = add(nose_path, [0, 0, -1, 0, 1, 0, 1, 0, 0, 0, 0, length * MM, 1, 0, 0, 0])
     try:
@@ -110,6 +129,70 @@ def main():
     except Exception as exc:  # appearance only
         print("  note: could not make the nose cone transparent:", exc)
     noarg(asm, "EditRebuild3")
+
+    # one mate: avbay axis coincident with the nose cone axis, so the avbay can only slide along
+    # the axis and turn about it. A limit distance mate (to stop it at the locked station) could
+    # not be created through AddMate5 on SOLIDWORKS 2018 - it comes out as a fixed distance - so
+    # add it by hand if wanted; see mechanical/cad/README.md.
+    travel = 460.0
+    p_ = b.PARAMS
+    asm_axis = b.add_axis(asm)
+    asm._FlagAsMethod("AddMate5")
+
+    def feature(model, name):
+        feat = noarg(model, "FirstFeature")
+        while feat is not None:
+            if feat.Name == name:
+                return feat
+            feat = noarg(feat, "GetNextFeature")
+        raise RuntimeError(f"no feature named {name}")
+
+    def mate(kind, first, second, dist=0.0, upper=0.0, lower=0.0):
+        asm.ClearSelection2(True)
+        first.Select2(False, 1)
+        second.Select2(True, 1)
+        err = VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
+        made = asm.AddMate5(kind, 2, False, dist, upper, lower, 1.0, 1.0, 0.0, 0.0, 0.0, False, False, 0, err)
+        asm.ClearSelection2(True)
+        if made is None:
+            raise RuntimeError(f"mate type {kind} failed (status {err.value})")
+        return made
+
+    mate(0, feature(asm, asm_axis), avbay_comp.FeatureByName(avbay_axis))  # swMateCOINCIDENT
+
+    def pose(z_mm, deg):  # avbay transform: turned `deg` about Z, bulkhead bottom at station z_mm
+        c, s_ = math.cos(math.radians(deg)), math.sin(math.radians(deg))
+        return [c, s_, 0, -s_, c, 0, 0, 0, 1, 0, 0, z_mm * MM, 1, 0, 0, 0]
+
+    def holds(z_mm, deg):
+        """Put the avbay in a pose and rebuild; True if the mates leave it there."""
+        want = pose(z_mm, deg)
+        avbay_comp.Transform2 = mu.CreateTransform(VARIANT(pythoncom.VT_ARRAY | pythoncom.VT_R8, want))
+        noarg(asm, "EditRebuild3")
+        got = avbay_comp.Transform2.ArrayData
+        return max(abs(got[i] - want[i]) for i in range(12)) < 1e-6
+
+    tab, lug = p_["bulkhead_tab"]["span"], p_["nose_lock"]["lug_span"]
+    turn = (lug[1] + (360.0 / p_["bulkhead_tab"]["count"] + lug[0] - lug[1]) / 2) - (tab[0] + tab[1]) / 2
+    checks = {
+        "locked": holds(off, 0.0),
+        "turned to the insertion angle": holds(off, turn),
+        "pulled out 200 mm": holds(off - 200.0, turn),
+        "pulled out all the way": holds(off - travel, turn),
+    }
+    sideways = pose(off, 0.0)
+    sideways[9] = 10.0 * MM  # 10 mm off the axis: the mate must pull it back
+    avbay_comp.Transform2 = mu.CreateTransform(VARIANT(pythoncom.VT_ARRAY | pythoncom.VT_R8, sideways))
+    noarg(asm, "EditRebuild3")
+    on_axis = abs(avbay_comp.Transform2.ArrayData[9]) < 1e-6
+    if not holds(off, 0.0):
+        raise RuntimeError("could not return the avbay to the locked position")
+    print(f"mate: avbay axis coincident with the nose cone axis; insertion angle {turn:.1f} deg")
+    for label, ok in checks.items():
+        print(f"  pose allowed - {label}: {ok}")
+    print(f"  moved 10 mm off the axis, the mate pulls it back: {on_axis}")
+    if not all(checks.values()):
+        raise RuntimeError("a pose that should be reachable is not allowed by the mates")
 
     mgr = asm.InterferenceDetectionManager
     mgr.TreatCoincidenceAsInterference = False
@@ -129,7 +212,7 @@ def main():
     reach = lambda hx, hy, r: math.hypot(hx - r, hy - r) + r  # noqa: E731
     whip = lambda key: (math.hypot(*p[key]["pos"]) + p[key]["dia"] / 2, top2 + sma + p[key]["len"])  # noqa: E731
     points = [
-        ("bulkhead", p["bulkhead_dia"] / 2, base),
+        ("bulkhead tab edge", p["bulkhead_tab"]["r"], base),
         ("top board edge", p["pcb_dia"] / 2, top_board),
         ("bay corner, bottom", reach(*p["bay_half"], p["bay_corner_r"]), p["bay_z"][0]),
         ("bay corner, top", reach(*p["bay_half"], p["bay_corner_r"]), top2),
@@ -143,9 +226,36 @@ def main():
         ("GPS board outer edge", math.hypot(p["bay_half"][0] + p["boss"]["height"] + p["gps_board"]["size"][0],
                                             p["gps_board"]["size"][1] / 2), p["gps_board"]["z"] + p["gps_board"]["size"][2]),
     ]
+    al, ab, asw = p["altimeter"], p["alt_batt"], p["alt_switch"]
+    x_back = b.spine_dims(p)["x_back"]
+    cover_out = -x_back + ab["depth"] + ab["cover_thk"]  # outer face of the battery retainer plate
+    cover_top = ab["z"] + ab["size"][2] + ab["top_clear"] + ab["roof"]
+    points += [
+        ("altimeter outer edge", math.hypot(p["bay_half"][0] + p["boss"]["height"] + al["size"][0], al["size"][1] / 2),
+         al["z"] + al["size"][2]),
+        ("alt battery cover", math.hypot(cover_out, ab["size"][1] / 2 + ab["side_clear"] + ab["wall"]), cover_top),
+        ("alt switch", math.hypot(cover_out + asw["size"][0], asw["size"][1] / 2), cover_top),
+        ("recovery antenna tip", math.hypot(abs(p["ant_recovery"]["pos"][0]) + p["ant_recovery"]["whip"][0] / 2,
+                                            p["bay_half"][1] + p["ant_recovery"]["pad"][1] + p["ant_recovery"]["sma"][1]
+                                            + p["ant_recovery"]["whip"][1]),
+         p["ant_recovery"]["pos"][1] + p["ant_recovery"]["whip"][0] / 2),
+    ]
+    nl = p["nose_lock"]
+    points = [(label, r, z + off) for label, r, z in points]  # avbay stations -> nose cone stations
+    points.append(("centering ring", nl["ring_r"][1], off + nl["ring_z"] + nl["ring_thk"]))
+    print(f"avbay is raised {off:.1f} mm above the nose cone open end by the twist-lock lugs")
+    def interp(z):  # linear interpolation of the measured profile copied into build_avbay.py
+        prof = p["nose_profile"]
+        for (z0, r0), (z1, r1) in zip(prof, prof[1:]):
+            if z0 <= z <= z1:
+                return r0 + (r1 - r0) * (z - z0) / (z1 - z0)
+        return 0.0
+
+    # "worst" uses the smallest radius of the neighbouring sampled bands (the bands are up to
+    # 20 mm apart, so it can be far too pessimistic); "interp" interpolates between them
     print("radial clearance against the nose cone inner surface (mm):")
     for label, r, z in points:
-        print(f"  {label:22s} z={z:6.1f}  part r={r:5.1f}  nose r={radius(z):5.1f}  clearance={radius(z) - r:6.1f}")
+        print(f"  {label:22s} z={z:6.1f}  part r={r:5.1f}  clearance: worst={radius(z) - r:6.1f}  interp={interp(z) - r:6.1f}")
     print(f"free length above the highest part to the inner tip: about {z_tip - max(z for _, _, z in points):.0f} mm")
 
     err = asm.SaveAs3(out, 0, 1)
