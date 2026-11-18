@@ -7,37 +7,27 @@
 | 文件 | 內容 |
 | --- | --- |
 | [新成員初始化指南](repo_setup.md) | 新成員 clone、設定提交身分與確認權限 |
-| [環境設定](installation.md) | 新成員取得專案與工具需求 |
-| [快速開始](usage.md) | 走完第一個任務與 PR |
-| [Git 工作流程](git_workflow.md) | 日常同步、分支與提交命名 |
-| [任務與審查](collaboration.md) | 任務驗收、PR 與各類成果要求 |
 | [協作流程範例](workflow_examples.md) | 從開 Issue 到合併的三個完整範例與寫法對照 |
-| [常見問題](troubleshooting.md) | Git 操作與協作疑問 |
+| [Git 工作流程](git_workflow.md) | 日常同步、分支與提交命名、常見問題 |
+| [協作規範](../CONTRIBUTING.md) | 團隊採用的任務、分支、PR 與審查規則 |
 
-## 規格與管理
+## 設計與規格
 
 | 文件 | 內容 |
 | --- | --- |
-| [專案結構與資料](project_structure.md) | 目前狀態、目錄用途與檔案保存 |
-| [團隊分工](team.md) | 模組負責人與審查安排 |
 | [系統架構](architecture.md) | 架構、設計與選型的總覽入口；目前為草案 |
 | [介面規格](interfaces.md) | 電氣、通訊、資料與機構介面；目前為草案 |
 | [設計決策](decisions.md) | 重大選擇的理由、代價與影響 |
 | [元件選型總表](component_selection.md) | 主備系統 MCU、感測器、GNSS 與無線電目前的選擇；隨時更新 |
-| [航電研發路徑圖](avionics_roadmap.md) | 航電從設計到比賽的階段、驗收與風險；目前為草案 |
+
+## 規則與檢查
+
+| 文件 | 內容 |
+| --- | --- |
 | [工程基本規則](engineering_rules.md) | 命名、路徑、程式與驗證基本要求 |
 | [測試與版本](testing.md) | 驗證程度、結果紀錄與里程碑 |
-| [維護者指南](maintainer_guide.md) | 權限、分支保護、責任安排與初始化清單 |
-| [協作規範](../CONTRIBUTING.md) | 團隊採用的任務、分支、PR 與審查規則 |
-
-操作文件提供說明，協作規則以 CONTRIBUTING.md 為準；變更時同步更新相關文件，避免互相矛盾。
+| [文件檢查工具](../tools/README.md) | 本機命令、GitHub CI 與限制 |
 
 ## 文件維護
 
-重要文件標示草案／現行／待驗證／歷史。規格形成後，再補上適用版本、負責人與最後確認日期。文件移動時修正連結；功能或介面變更時同步更新說明。
-
-## 範本與檢查
-
-- [文件自動檢查](automation.md)：本機命令與 GitHub CI。
-- [文件範本](templates/README.md)：設計說明、測試與里程碑紀錄。
-- [首次工作清單](first_tasks.md)：初期可承接的任務。
+重要文件標示草案／現行／待驗證／歷史。文件移動時修正連結；功能或介面變更時同步更新說明。協作規則以 CONTRIBUTING.md 為準。

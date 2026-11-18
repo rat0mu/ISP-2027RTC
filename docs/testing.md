@@ -35,4 +35,4 @@ main 是團隊已接受的整合基準。製造、整機測試與飛行使用的
 
 返回 [文件索引](README.md)。
 
-本模板目前可執行的檢查是 [本地文件連結](automation.md)。結果不代表航電功能驗證。實際測試記錄可採 [測試範本](templates/test_report.md)，里程碑採 [發布檢查表](templates/release_checklist.md)。
+本模板目前可執行的檢查是 [本地文件連結](../tools/README.md)。結果不代表航電功能驗證。
